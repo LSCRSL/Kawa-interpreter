@@ -50,10 +50,24 @@ let exec_prog (p: program): unit =
         | Gt -> VBool (evali e1 > evali e2)
         | Ge -> VBool (evali e1 >= evali e2)
         (*on a le droit de comparer tout en caml*)
-        | Eq -> VBool (eval e1 = eval e2)
-        | Neq -> VBool (eval e1 != eval e2)
-        | And -> VBool (evalb e1 && evalb e2)
-        | Or -> VBool (evalb e1 || evalb e2)
+        | Eq -> let ev1 = eval e1 in let ev2 = eval e2 in let b = (ev1 = ev2) in if b = false then VBool false else 
+                  (match ev1, ev2 with
+                  | VObj v1, VObj v2 -> failwith "comparing two objects is not implemented"
+                  | _, _ -> VBool true
+                )
+
+        | Neq -> let vb = eval (Binop(Eq, e1, e2)) in (
+              match vb with
+              | VBool true -> VBool false
+              | VBool false -> VBool true
+              | _ -> failwith "error with operator !="
+          ) 
+        | And -> let v1 = evalb e1 in 
+              if v1 = false then VBool false
+              else VBool (evalb e2)
+        | Or -> let v1 = evalb e1 in 
+              if v1 = false then VBool true
+              else VBool (evalb e2)
       )
 
       | Unop(op, e) -> (match op with

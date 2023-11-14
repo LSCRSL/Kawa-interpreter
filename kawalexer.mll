@@ -12,10 +12,14 @@
       "main",     MAIN;
       "true",     TRUE;
       "false",    FALSE;
+      "int",      TINT;
       "if",       IF;
       "else",     ELSE;
       "while",    WHILE; 
       "return",   RETURN;
+      "class",    CLASS;
+      "extends",  EXTENDS;
+      "attribute", ATTRIBUTE;
     ] ;
   fun s ->
     try  Hashtbl.find h s
@@ -39,6 +43,7 @@ rule token = parse
   | ident as id  { keyword_or_ident id }
 
   | ";"  { SEMI }
+  | ","  { COMMA }
   | "("  { LPAR }
   | ")"  { RPAR }
   | "{"  { BEGIN }
@@ -61,6 +66,8 @@ rule token = parse
   | "!"  { NOT }
   (*affectation*)
   | "="  { SET }
+  (*acces a un attribut*)
+  | "." { DOT }
 
   | _    { raise (Error ("unknown character : " ^ lexeme lexbuf)) }
   | eof  { EOF }

@@ -1,0 +1,10 @@
+class point {
+    attribute int x;
+    attribute int y;
+}
+
+class origine extends point {}
+
+main {
+    print(1);
+}

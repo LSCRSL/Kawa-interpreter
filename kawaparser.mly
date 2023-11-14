@@ -8,8 +8,11 @@
 %token <int> INT
 %token <string> IDENT
 %token MAIN
-%token LPAR RPAR BEGIN END SEMI
+%token LPAR RPAR BEGIN END SEMI COMMA
 %token PRINT IF ELSE WHILE RETURN SET
+%token CLASS EXTENDS ATTRIBUTE
+%token TINT
+%token DOT
 %token EOF
 %token TRUE FALSE
 %token PLUS STAR MINUS DIV MODULO (*arithmetique*)
@@ -31,10 +34,24 @@
 %%
 
 program:
-| MAIN BEGIN main=list(instruction) END EOF
-    { {classes=[]; globals=[]; main} }
+| cls=list(class_def) MAIN BEGIN main=list(instruction) END EOF
+    { {classes=cls; globals=[]; main} }
 ;
 
+(*à completer*)
+type_decl:
+| TINT { TInt }
+;
+
+(*rajouter les methodes*)
+class_def:
+| CLASS cls=IDENT BEGIN attr=list(attribute_declaration) END { {class_name=cls; attributes=attr; methods=[]; parent=None}}
+| CLASS cls=IDENT EXTENDS parent_name=IDENT BEGIN attr=list(attribute_declaration) END {{class_name=cls; attributes=attr; methods=[]; parent=Some parent_name}}
+;
+
+attribute_declaration:
+| ATTRIBUTE t=type_decl attr=IDENT SEMI {(attr, t)}
+;
 
 else_branch:
 | ELSE BEGIN seq2=list(instruction) END { seq2 }
@@ -50,8 +67,12 @@ instruction:
 | e=expression SEMI { Expr e }
 | RETURN e=expression SEMI { Return e}
 (*affectation*)
-| x=IDENT SET e=expression SEMI {Set(Var x, e)}
+| x=memory_access SET e=expression SEMI {Set(x, e)}
 ;
+
+memory_access:
+| x=IDENT {Var x}
+| e=expression DOT attr=IDENT { Field(e, attr) }
 
 expression:
 | n=INT { Int n }
