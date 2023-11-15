@@ -10,9 +10,12 @@
   List.iter (fun (s, k) -> Hashtbl.add h s k)
     [ "print",    PRINT;
       "main",     MAIN;
+      "void",     TVOID;
+      "bool",     TBOOL;
       "true",     TRUE;
       "false",    FALSE;
       "int",      TINT;
+      "var",      VAR;
       "if",       IF;
       "else",     ELSE;
       "while",    WHILE; 
@@ -20,6 +23,8 @@
       "class",    CLASS;
       "extends",  EXTENDS;
       "attribute", ATTRIBUTE;
+      
+      
     ] ;
   fun s ->
     try  Hashtbl.find h s

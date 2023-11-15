@@ -10,8 +10,9 @@
 %token MAIN
 %token LPAR RPAR BEGIN END SEMI COMMA
 %token PRINT IF ELSE WHILE RETURN SET
+%token VAR
 %token CLASS EXTENDS ATTRIBUTE
-%token TINT
+%token TINT TBOOL TVOID
 %token DOT
 %token EOF
 %token TRUE FALSE
@@ -34,13 +35,19 @@
 %%
 
 program:
-| cls=list(class_def) MAIN BEGIN main=list(instruction) END EOF
+| global_var=list(var_global) cls=list(class_def) MAIN BEGIN main=list(instruction) END EOF
     { {classes=cls; globals=[]; main} }
 ;
 
-(*à completer*)
+var_global :
+|VAR t=type_decl name=IDENT SEMI {(name,t)}
+;
+
 type_decl:
 | TINT { TInt }
+| TBOOL { TBool }
+| TVOID { TVoid }
+| IDENT { Ident } (*pb ici*)
 ;
 
 (*rajouter les methodes*)
