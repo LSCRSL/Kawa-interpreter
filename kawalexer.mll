@@ -23,6 +23,8 @@
       "class",    CLASS;
       "extends",  EXTENDS;
       "attribute", ATTRIBUTE;
+      "new",       NEW;
+      "this",      THIS;
       
       
     ] ;

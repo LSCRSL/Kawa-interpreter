@@ -11,7 +11,7 @@
 %token LPAR RPAR BEGIN END SEMI COMMA
 %token PRINT IF ELSE WHILE RETURN SET
 %token VAR
-%token CLASS EXTENDS ATTRIBUTE
+%token CLASS EXTENDS ATTRIBUTE (*classe*)
 %token TINT TBOOL TVOID
 %token DOT
 %token EOF
@@ -47,7 +47,7 @@ type_decl:
 | TINT { TInt }
 | TBOOL { TBool }
 | TVOID { TVoid }
-| IDENT { Ident } (*pb ici*)
+| x=IDENT { TClass x }
 ;
 
 (*rajouter les methodes*)
@@ -86,6 +86,7 @@ expression:
 | TRUE  { Bool true }
 | FALSE { Bool false }
 | LPAR e=expression RPAR {e}
+| v=memory_access {Get(v)}
 (*operations*)
 | e1=expression op=binop e2=expression { Binop(op, e1, e2) }
 | op=unop e=expression { Unop(op, e) }
