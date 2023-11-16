@@ -21,6 +21,7 @@ let typecheck_prog p =
 
   and type_expr e tenv = match e with
     | Int _  -> TInt
+    | Bool _ -> TBool
     | _ -> failwith "case not implemented in type_expr"
 
   and type_mem_access m tenv = match m with
