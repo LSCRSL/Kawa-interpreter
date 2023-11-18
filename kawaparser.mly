@@ -11,7 +11,7 @@
 %token LPAR RPAR BEGIN END SEMI COMMA
 %token PRINT IF ELSE WHILE RETURN SET
 %token VAR
-%token CLASS EXTENDS ATTRIBUTE (*classe*)
+%token CLASS EXTENDS ATTRIBUTE NEW THIS (*classe*)
 %token TINT TBOOL TVOID
 %token DOT
 %token EOF
@@ -21,13 +21,14 @@
 %token AND OR
 %token NOT
 
-(* Priorités *)
+(* Priorités par ordre croissante de priorités*)
 %left OR
 %left AND
 %right NOT
 %left LT LTE GT GTE ISEQUAL NOTEQUAL
 %left PLUS MINUS
 %left STAR DIV MODULO
+%nonassoc DOT  (*priorité la plus élevée pour accéder à un attribut ?*)
 
 %start program
 %type <Kawa.program> program
@@ -36,7 +37,7 @@
 
 program:
 | global_var=list(var_global) cls=list(class_def) MAIN BEGIN main=list(instruction) END EOF
-    { {classes=cls; globals=[]; main} }
+    { {classes=cls; globals=global_var; main} }
 ;
 
 var_global :
@@ -80,6 +81,7 @@ instruction:
 memory_access:
 | x=IDENT {Var x}
 | e=expression DOT attr=IDENT { Field(e, attr) }
+;
 
 expression:
 | n=INT { Int n }
@@ -106,6 +108,7 @@ expression:
 | NOTEQUAL {Neq}
 | AND {And}
 | OR {Or}
+;
 
 %inline unop:
 | NOT { Not }
