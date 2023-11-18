@@ -11,7 +11,7 @@
 %token LPAR RPAR BEGIN END SEMI COMMA
 %token PRINT IF ELSE WHILE RETURN SET
 %token VAR
-%token CLASS EXTENDS ATTRIBUTE NEW THIS (*classe*)
+%token CLASS METHOD CONSTR EXTENDS ATTRIBUTE NEW THIS (*classe*)
 %token TINT TBOOL TVOID
 %token DOT
 %token EOF
@@ -53,12 +53,20 @@ type_decl:
 
 (*rajouter les methodes*)
 class_def:
-| CLASS cls=IDENT BEGIN attr=list(attribute_declaration) END { {class_name=cls; attributes=attr; methods=[]; parent=None}}
-| CLASS cls=IDENT EXTENDS parent_name=IDENT BEGIN attr=list(attribute_declaration) END {{class_name=cls; attributes=attr; methods=[]; parent=Some parent_name}}
+| CLASS cls=IDENT BEGIN attr=list(attribute_declaration) mthd=list(method_def) END { {class_name=cls; attributes=attr; methods=mthd; parent=None}}
+| CLASS cls=IDENT EXTENDS parent_name=IDENT BEGIN attr=list(attribute_declaration) mthd=list(method_def) END {{class_name=cls; attributes=attr; methods=mthd; parent=Some parent_name}}
 ;
 
 attribute_declaration:
 | ATTRIBUTE t=type_decl attr=IDENT SEMI {(attr, t)}
+;
+
+method_def:
+| METHOD t=type_decl name=IDENT LPAR param=separated_list(COMMA,arg) RPAR BEGIN var=list(var_global) instr=list(instruction) END {{method_name=name; code=instr; params=param; locals=var; return=t}}
+;
+
+arg:
+| t=type_decl name=IDENT {(name,t)}
 ;
 
 else_branch:
@@ -96,6 +104,8 @@ expression:
 (*classes*)
 | NEW x=IDENT {New x}
 | NEW x=IDENT LPAR params=separated_list(COMMA, expression) RPAR {NewCstr(x,params) } 
+(*method*)
+| e=expression DOT name=IDENT LPAR param=separated_list(COMMA,expression) RPAR {MethCall(e,name,param)}
 ;
 
 %inline binop:

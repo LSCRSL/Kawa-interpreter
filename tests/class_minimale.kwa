@@ -3,11 +3,19 @@ class point {
     attribute int y;
 
     // declaration
+    method void test (int px) {
+        var int l;
+        l = px;
+        print(l);
+        
+
+    }
 }
 
 class origine extends point {}
 
 main {
     p = new point;
+    p.test(1);
     //print(p);
 }

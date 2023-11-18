@@ -19,10 +19,7 @@ let exec_prog (p: program): unit =
   (*rajouter les variables globales dans env*)
   List.iter (fun (x, _) -> Hashtbl.add env x Null) p.globals;
   
-  let rec eval_call f this args =
-    failwith "eval_call not implemented"
-
-  and exec_seq s lenv =
+  let rec exec_seq s lenv =
     let rec evali e = match eval e with
       | VInt n -> n
       | _ -> assert false
@@ -33,8 +30,45 @@ let exec_prog (p: program): unit =
       | VObj o -> o
       | _ -> assert false
 
+    and eval_call (f: string) (this: expr) (args : expr list) =
+        let type_var = (evalo this) in 
+        let class_name = type_var.cls in 
+        let get_first_element class_def_filter = 
+          match class_def_filter with 
+            | [] ->  failwith "the class is not implemented"
+            | e::[] -> e
+            | _ -> failwith "multiple classes have the same name"
+        in 
+        let class_list = p.classes in 
+        let class_def_filter = List.filter (fun cls_def -> (cls_def.class_name = class_name)) class_list in
+        let class_def = get_first_element class_def_filter in
+        let method_list = List.filter (fun method_def -> (method_def.method_name = f)) class_def.methods in
+        let mthd = get_first_element method_list in 
+        let var = Hashtbl.create 16 in
+        (*verification de type en parametre (appel typechecker)*)
+        let rec param_to_env args params = match args,params with 
+          | e1::l1, (name, typ)::l2 ->  Hashtbl.add var name (eval e1);
+                                        param_to_env l1 l2;
+          | [], [] -> ()
+          | _,_ -> failwith "the number of parameters is incorrect"
+      in 
+      let () = param_to_env args mthd.params in
+      let rec locals_to_env lcls = match lcls with 
+      | (name,typ)::l ->  Hashtbl.add var name Null;
+                          locals_to_env l;
+      | [] -> ()
+    in 
+    let () = locals_to_env mthd.locals in 
+    exec_seq mthd.code var
+
     and evalvar (m : mem_access) = match m with
-      | Var x -> Hashtbl.find env x
+      | Var x -> if Hashtbl.mem lenv x then
+                    Hashtbl.find lenv x
+                 else 
+                  if Hashtbl.mem env x then 
+                    Hashtbl.find env x
+                  else
+                    failwith "undefined variable"
       | _ -> failwith "not implemented error"
 
     and evalnew(x : expr) = 
@@ -54,8 +88,7 @@ let exec_prog (p: program): unit =
           let () = List.iter (fun (attr_name, attr_type) -> Hashtbl.add attr_env attr_name Null) class_def.attributes in
           {cls=class_name; fields=attr_env};
         | _ -> failwith "not implemented error"
-            
-        
+    
     and eval (e: expr): value = 
       match e with
       | Int n  -> VInt n
@@ -99,6 +132,7 @@ let exec_prog (p: program): unit =
 
       | Get mem -> evalvar mem
       | New x -> VObj (evalnew (New x))
+      | MethCall (e,name,param) -> eval_call name e param; Null  
       | _ -> failwith "case not implemented in eval"
     in
   
@@ -108,7 +142,7 @@ let exec_prog (p: program): unit =
             match v with 
             | VInt n -> Printf.printf "%d\n" n
             | VBool b -> Printf.printf "%b\n" b
-            | _ -> failwith "not implemented"
+            | _ -> failwith "not implemented a"
           )
       | If(e, s1, s2) -> let v = evalb e in if v = true then exec_seq s1 else exec_seq s2
       | While(e, s) -> let v = evalb e in 
@@ -119,14 +153,13 @@ let exec_prog (p: program): unit =
           end 
       | Set(m, e) -> (match m with
           | Var x -> Hashtbl.replace env x (eval e)
-          | _ -> failwith "not implemented"
+          | _ -> failwith "not implemented bis"
         )
+      | Expr(e) -> let _ = eval e in ()
       | _ -> failwith "case not implemented in exec"
     and exec_seq s = 
       List.iter exec s
     in
-
     exec_seq s
   in
-  
   exec_seq p.main (Hashtbl.create 1)
