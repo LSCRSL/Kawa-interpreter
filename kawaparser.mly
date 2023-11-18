@@ -71,8 +71,9 @@ instruction:
 | IF LPAR e=expression RPAR BEGIN seq=list(instruction) END seq2=loption(else_branch) { If(e, seq, seq2) }
 (*boucle while*)
 | WHILE LPAR e=expression RPAR BEGIN seq=list(instruction) END { While(e, seq) }
-(*expression utilisee comme instruction*)
+(*expression utilisee comme instruction : pour l'appel de fonctions*)
 | e=expression SEMI { Expr e }
+(*return*)
 | RETURN e=expression SEMI { Return e}
 (*affectation*)
 | x=memory_access SET e=expression SEMI {Set(x, e)}
@@ -92,6 +93,9 @@ expression:
 (*operations*)
 | e1=expression op=binop e2=expression { Binop(op, e1, e2) }
 | op=unop e=expression { Unop(op, e) }
+(*classes*)
+| NEW x=IDENT {New x}
+| NEW x=IDENT LPAR params=separated_list(COMMA, expression) RPAR {NewCstr(x,params) } 
 ;
 
 %inline binop:

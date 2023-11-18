@@ -29,7 +29,7 @@ let typecheck_prog p =
   in
 
   let rec check_instr i ret tenv = match i with
-    | Print e -> check e TInt tenv
+    | Print e -> check e TInt tenv || check e TBool tenv
     | _ -> failwith "case not implemented in check_instr"
   and check_seq s ret tenv =
     List.iter (fun i -> check_instr i ret tenv) s

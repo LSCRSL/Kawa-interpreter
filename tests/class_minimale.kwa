@@ -1,10 +1,13 @@
 class point {
     attribute int x;
     attribute int y;
+
+    // declaration
 }
 
 class origine extends point {}
 
 main {
-    print(1);
+    p = new point;
+    //print(p);
 }

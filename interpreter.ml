@@ -5,6 +5,7 @@ type value =
   | VBool of bool
   | VObj  of obj
   | Null
+
 and obj = {
   cls:    string;
   fields: (string, value) Hashtbl.t;
@@ -15,6 +16,7 @@ exception Return of value
 
 let exec_prog (p: program): unit =
   let env = Hashtbl.create 16 in
+  (*rajouter les variables globales dans env*)
   List.iter (fun (x, _) -> Hashtbl.add env x Null) p.globals;
   
   let rec eval_call f this args =
@@ -32,12 +34,32 @@ let exec_prog (p: program): unit =
       | _ -> assert false
 
     and evalvar (m : mem_access) = match m with
-    | Var x -> Hashtbl.find env x
-    | _ -> failwith "not implemented error"
+      | Var x -> Hashtbl.find env x
+      | _ -> failwith "not implemented error"
+
+    and evalnew(x : expr) = 
+      let get_first_element class_def_filter = 
+        match class_def_filter with 
+          | [] ->  failwith "the class is not implemented"
+          | e::[] -> e
+          | _ -> failwith "multiple classes have the same name"
+
+      in match x with
+        | New class_name -> 
+          (*chercher dans classes la definition qu'on veut*)
+          let class_list = p.classes in 
+          let class_def_filter = List.filter (fun cls_def -> (cls_def.class_name = class_name)) class_list in
+          let class_def = get_first_element class_def_filter in 
+          let attr_env = Hashtbl.create 8 in 
+          let () = List.iter (fun (attr_name, attr_type) -> Hashtbl.add attr_env attr_name Null) class_def.attributes in
+          {cls=class_name; fields=attr_env};
+        | _ -> failwith "not implemented error"
+            
         
     and eval (e: expr): value = 
       match e with
       | Int n  -> VInt n
+      | Bool b -> VBool b
 
       | Binop(op, e1, e2) -> (match op with
         | Add -> VInt (evali e1 + evali e2)
@@ -74,7 +96,9 @@ let exec_prog (p: program): unit =
         | Not -> let b = evalb e in if b = true then VBool false else VBool true
         | Opp -> VInt (- (evali e))
       )
-      
+
+      | Get mem -> evalvar mem
+      | New x -> VObj (evalnew (New x))
       | _ -> failwith "case not implemented in eval"
     in
   
