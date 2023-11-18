@@ -1,3 +1,4 @@
+var point p;
 class point {
     attribute int x;
     attribute int y;
@@ -16,6 +17,6 @@ class origine extends point {}
 
 main {
     p = new point;
-    p.test(1);
+    p.test(3);
     //print(p);
 }

@@ -30,6 +30,7 @@ let exec_prog (p: program): unit =
       | VObj o -> o
       | _ -> assert false
 
+    (*rajouter this à l'environnement local*)
     and eval_call (f: string) (this: expr) (args : expr list) =
         let type_var = (evalo this) in 
         let class_name = type_var.cls in 
@@ -69,6 +70,7 @@ let exec_prog (p: program): unit =
                     Hashtbl.find env x
                   else
                     failwith "undefined variable"
+                    
       | _ -> failwith "not implemented error"
 
     and evalnew(x : expr) = 
@@ -142,7 +144,8 @@ let exec_prog (p: program): unit =
             match v with 
             | VInt n -> Printf.printf "%d\n" n
             | VBool b -> Printf.printf "%b\n" b
-            | _ -> failwith "not implemented a"
+            | VObj _ -> Printf.printf "objet"
+            | Null -> Printf.printf "null"
           )
       | If(e, s1, s2) -> let v = evalb e in if v = true then exec_seq s1 else exec_seq s2
       | While(e, s) -> let v = evalb e in 
@@ -152,11 +155,17 @@ let exec_prog (p: program): unit =
             exec (While(e, s));
           end 
       | Set(m, e) -> (match m with
-          | Var x -> Hashtbl.replace env x (eval e)
+          | Var x -> if Hashtbl.mem lenv x then
+                        Hashtbl.replace lenv x (eval e)
+                    else 
+                      if Hashtbl.mem env x then 
+                        Hashtbl.replace env x (eval e)
+                      else
+                        failwith "undefined variable"
           | _ -> failwith "not implemented bis"
         )
-      | Expr(e) -> let _ = eval e in ()
-      | _ -> failwith "case not implemented in exec"
+      | Expr(e) -> let _ = eval e in () (*faire un match : si c'est une méthode appeler eval sinon renvoyer une erreur*)
+      | _ -> failwith "case not implemented in exec" (*penser au cas du return, eval_call doit renvoyer e avec la bonne étiquette ou void*)
     and exec_seq s = 
       List.iter exec s
     in
