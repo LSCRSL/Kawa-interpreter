@@ -6,6 +6,7 @@
 - gérer l'heritage, lors d'un appel de fonction, on veut pouvoir remonter dans les différentes 
 - gérer l'acces au parametre implicite this dans l'appel de methode
 - verification des types dans appel de fonctions (il faut matcher avec la déclaration de la methode)
+- penser au constructeur 
 
 # Tests
 Rajouter des tests qui sont censés planter pour illustrer les erreurs de syntaxe possible
