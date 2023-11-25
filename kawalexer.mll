@@ -22,7 +22,6 @@
       "return",   RETURN;
       "class",    CLASS;
       "method",   METHOD;
-      "constructor", CONSTR;
       "extends",  EXTENDS;
       "attribute", ATTRIBUTE;
       "new",       NEW;

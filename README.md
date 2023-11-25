@@ -6,14 +6,14 @@
 - gérer l'heritage, lors d'un appel de fonction, on veut pouvoir remonter dans les différentes
 - gérer l'acces au parametre implicite this dans l'appel de methode -> OK
 - verification des types dans appel de fonctions (il faut matcher avec la déclaration de la methode)
-- penser au constructeur 
+- penser au constructeur --> OK
 
 # Tests
 Rajouter des tests qui sont censés planter pour illustrer les erreurs de syntaxe possible
 
 # Questions
 - pour les attributs de classe, est-ce qu'on autorise une valeur par défaut ? (`attribute int x = 2;`)
-- priorités pour '.' (DOT) pour accéder aux attributs de classe
+- priorités pour '.' (DOT) pour accéder aux attributs de classe (ajouter associativité à gauche)
 - comment faire pour ne pas autoriser deux classes ayant le meme nom (ou deux variables)
 - Est ce qu'on autorise la surchage des méthodes ?
 - quand on a expression vu comme une instruction, la seule possibilité est-elle d'avoir un appel de methode ?

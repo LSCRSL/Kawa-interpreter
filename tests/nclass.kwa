@@ -1,5 +1,6 @@
 var segment s;
 var point p;
+var paire m;
 
 class point {
   attribute int x;
@@ -9,6 +10,20 @@ class point {
 class segment {
   attribute point a;
   attribute point b;
+}
+
+class paire {
+  attribute int x;
+  attribute int y;
+
+  method void constructor(int x, int y) {
+    this.x = x;
+    this.y = y;
+  }
+
+  method int somme() {
+    return this.x + this.y;
+  }
 }
 
 main {
@@ -23,4 +38,7 @@ main {
   p.y = 4;
   print(s.a.x + s.a.y + s.b.x + s.b.y);
   // affiche 10
+  m = new paire(1, 2);
+  print(m.x - m.y);
+  print(---3);
 }

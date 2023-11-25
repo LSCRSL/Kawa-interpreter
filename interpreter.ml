@@ -32,9 +32,9 @@ let exec_prog (p: program): unit =
       | _ -> assert false
 
     (*rajouter this à l'environnement local*)
-    and eval_call (f: string) (this: expr) (args : expr list) =
-        let objet = (evalo this) in 
-        let class_name = objet.cls in 
+    and eval_call (f: string) (this: obj) (args : expr list) =
+        (*let objet = (evalo this) in*)
+        let class_name = this.cls in 
 
         let get_first_element class_def_filter = 
           match class_def_filter with 
@@ -55,7 +55,7 @@ let exec_prog (p: program): unit =
         (*environnement local pour exécuter la fonction*)
         let local_env = Hashtbl.create 16 in
         (*ajouter l'objet courant à l'environnement*)
-        let () = Hashtbl.add local_env "this" (VObj objet) in
+        let () = Hashtbl.add local_env "this" (VObj this) in
         (*verification de type en parametre (appel typechecker)*)
         let rec param_to_env args params = match args,params with 
           | e1::l1, (name, typ)::l2 ->  Hashtbl.add local_env name (eval e1);
@@ -95,19 +95,25 @@ let exec_prog (p: program): unit =
           | [] ->  failwith "the class is not implemented"
           | e::[] -> e
           | _ -> failwith "multiple classes have the same name"
+      in
+      let init_object class_name = 
+        (*chercher dans classes la definition qu'on veut*)
+        let class_list = p.classes in 
+        let class_def_filter = List.filter (fun cls_def -> (cls_def.class_name = class_name)) class_list in
+        let class_def = get_first_element class_def_filter in 
+        (*environnement pour les attributs*)
+        let attr_env = Hashtbl.create 8 in 
+        let () = List.iter (fun (attr_name, attr_type) -> Hashtbl.add attr_env attr_name Null) class_def.attributes in
+        class_def,{cls=class_name; fields=attr_env};
+      in
+      match x with
+        | New class_name -> snd(init_object class_name)
+        | NewCstr (class_name, param) -> let cls_def,obj = init_object class_name in
+                                          (*let mthd_def_filter = List.filter (fun mthd_def -> (mthd_def.method_name = "constructor")) cls_def.methods in
+                                          let constructor = get_first_element mthd_def_filter in*)
+                                          let _ = eval_call "constructor" obj param in obj                         
+        | _ -> assert false 
 
-      in match x with
-        | New class_name -> 
-          (*chercher dans classes la definition qu'on veut*)
-          let class_list = p.classes in 
-          let class_def_filter = List.filter (fun cls_def -> (cls_def.class_name = class_name)) class_list in
-          let class_def = get_first_element class_def_filter in 
-          (*environnement pour les attributs*)
-          let attr_env = Hashtbl.create 8 in 
-          let () = List.iter (fun (attr_name, attr_type) -> Hashtbl.add attr_env attr_name Null) class_def.attributes in
-          {cls=class_name; fields=attr_env};
-        | _ -> failwith "not implemented error"
-    
     and eval (e: expr): value = 
       match e with
       | Int n  -> VInt n
@@ -150,10 +156,10 @@ let exec_prog (p: program): unit =
       )
 
       | Get mem -> evalvar mem
-      | New x -> VObj (evalnew (New x))
-      | MethCall (e,name,param) -> eval_call name e param  (*e : objet, param: parametre de la fonction*)
+      | New _ | NewCstr _  -> VObj (evalnew e)
+      | MethCall (e,name,param) -> let objet = (evalo e) in
+                                  eval_call name objet param  (*e : objet, param: parametre de la fonction*)
       | This -> Hashtbl.find lenv "this"
-      | _ -> failwith "case not implemented in eval"
     in
   
     let rec exec (i: instr): unit = match i with
