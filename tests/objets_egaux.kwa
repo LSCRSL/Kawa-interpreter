@@ -1,5 +1,6 @@
-var point p;
-var int x;
+var point p1;
+var point p2;
+var point p3;
 class point {
     attribute int x;
     attribute int y;
@@ -10,12 +11,15 @@ class point {
         l = px;
         return l+1;
     }
+
 }
 
 class origine extends point {}
 
 main {
-    p = new point;
-    x = p.test(3);
-    print(x);
+    p1 = new point;
+    p2 = new point;
+    p3 = p1;
+    p3.x = 3;
+    print(p1.x);
 }

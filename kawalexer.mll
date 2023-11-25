@@ -37,7 +37,10 @@
 }
 
 let digit = ['0'-'9']
+(*
 let number = ['-']? digit+
+*)
+let number = digit+
 let alpha = ['a'-'z' 'A'-'Z']
 let ident = ['a'-'z' '_'] (alpha | '_' | digit)*
   

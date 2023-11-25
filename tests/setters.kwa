@@ -1,0 +1,33 @@
+var point p;
+var int x;
+class point {
+    attribute int x;
+    attribute int y;
+
+    // declaration
+    method void set_x (int px) {
+        this.x = px;
+        //print(this.x);
+    }
+
+    method void set_y (int py) {
+        this.y = py;
+    }
+
+    method int get_x () {
+        return this.x;
+    }
+
+    method int get_y () {
+        return this.y;
+    }
+}
+
+class origine extends point {}
+
+main {
+    p = new point;
+    p.set_x(5);
+    p.set_y(p.x+3);
+    print(p.y);
+}

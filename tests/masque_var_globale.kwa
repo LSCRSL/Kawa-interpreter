@@ -6,9 +6,10 @@ class point {
 
     // declaration
     method int test (int px) {
-        var int l;
-        l = px;
-        return l+1;
+        var int x;
+        x = px+1;
+        this.x = x; 
+        return x;
     }
 }
 
@@ -17,5 +18,6 @@ class origine extends point {}
 main {
     p = new point;
     x = p.test(3);
-    print(x);
+    print(p.x);
+    print(-3);
 }

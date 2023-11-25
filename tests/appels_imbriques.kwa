@@ -1,0 +1,36 @@
+var point p;
+var int x;
+class point {
+    attribute int x;
+    attribute int y;
+
+    // declaration
+    method int incr_1 (int px) {
+        var int l;
+        l = px;
+        this.x = 2;
+        return l+1;
+    }
+
+    // env
+    // px ->
+    // l ->
+    // this -> Objet
+    method int incr_2 (int px) {
+        var int l;
+        var int g;
+
+        l = this.incr_1(px); // 10
+        g = this.incr_1(1); // 2
+        return l+this.x;  // 12
+    }
+}
+
+class origine extends point {}
+
+main {
+    p = new point;
+    x = p.incr_2(9);
+    p.x = 4;
+    print(p.x);
+}

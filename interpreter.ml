@@ -16,6 +16,7 @@ exception Return of value
 
 let exec_prog (p: program): unit =
   let env = Hashtbl.create 16 in
+  let return_exp = ref Null in
   (*rajouter les variables globales dans env*)
   List.iter (fun (x, _) -> Hashtbl.add env x Null) p.globals;
   
@@ -32,36 +33,48 @@ let exec_prog (p: program): unit =
 
     (*rajouter this à l'environnement local*)
     and eval_call (f: string) (this: expr) (args : expr list) =
-        let type_var = (evalo this) in 
-        let class_name = type_var.cls in 
+        let objet = (evalo this) in 
+        let class_name = objet.cls in 
+
         let get_first_element class_def_filter = 
           match class_def_filter with 
             | [] ->  failwith "the class is not implemented"
             | e::[] -> e
             | _ -> failwith "multiple classes have the same name"
         in 
+        (*liste des classes dans le programme*)
         let class_list = p.classes in 
-        let class_def_filter = List.filter (fun cls_def -> (cls_def.class_name = class_name)) class_list in
+        (*recuperer la classe de objet*)
+        let class_def_filter =  (*retourne une liste*)
+            List.filter (fun cls_def -> (cls_def.class_name = class_name)) class_list in
+        (*premier element de la liste*)
         let class_def = get_first_element class_def_filter in
+        (*a modifier si on veut autoriser la surcharge*)
         let method_list = List.filter (fun method_def -> (method_def.method_name = f)) class_def.methods in
         let mthd = get_first_element method_list in 
-        let var = Hashtbl.create 16 in
+        (*environnement local pour exécuter la fonction*)
+        let local_env = Hashtbl.create 16 in
+        (*ajouter l'objet courant à l'environnement*)
+        let () = Hashtbl.add local_env "this" (VObj objet) in
         (*verification de type en parametre (appel typechecker)*)
         let rec param_to_env args params = match args,params with 
-          | e1::l1, (name, typ)::l2 ->  Hashtbl.add var name (eval e1);
+          | e1::l1, (name, typ)::l2 ->  Hashtbl.add local_env name (eval e1);
                                         param_to_env l1 l2;
           | [], [] -> ()
           | _,_ -> failwith "the number of parameters is incorrect"
       in 
       let () = param_to_env args mthd.params in
+      (*ajouter les variables locales*)
       let rec locals_to_env lcls = match lcls with 
-      | (name,typ)::l ->  Hashtbl.add var name Null;
+      | (name,typ)::l ->  Hashtbl.add local_env name Null;
                           locals_to_env l;
       | [] -> ()
     in 
     let () = locals_to_env mthd.locals in 
-    exec_seq mthd.code var
-
+    (*definir une ref pour la valeur de retour*)
+    let () = exec_seq mthd.code local_env in 
+    !return_exp (*dereference le pointeur*)
+    
     and evalvar (m : mem_access) = match m with
       | Var x -> if Hashtbl.mem lenv x then
                     Hashtbl.find lenv x
@@ -71,9 +84,12 @@ let exec_prog (p: program): unit =
                   else
                     failwith "undefined variable"
                     
-      | _ -> failwith "not implemented error"
+      | Field(e, attribute) -> 
+              let obj = evalo e in 
+              Hashtbl.find obj.fields attribute
 
     and evalnew(x : expr) = 
+      (*creer un nouvel objet*)
       let get_first_element class_def_filter = 
         match class_def_filter with 
           | [] ->  failwith "the class is not implemented"
@@ -86,6 +102,7 @@ let exec_prog (p: program): unit =
           let class_list = p.classes in 
           let class_def_filter = List.filter (fun cls_def -> (cls_def.class_name = class_name)) class_list in
           let class_def = get_first_element class_def_filter in 
+          (*environnement pour les attributs*)
           let attr_env = Hashtbl.create 8 in 
           let () = List.iter (fun (attr_name, attr_type) -> Hashtbl.add attr_env attr_name Null) class_def.attributes in
           {cls=class_name; fields=attr_env};
@@ -109,7 +126,7 @@ let exec_prog (p: program): unit =
         (*on a le droit de comparer tout en caml*)
         | Eq -> let ev1 = eval e1 in let ev2 = eval e2 in let b = (ev1 = ev2) in if b = false then VBool false else 
                   (match ev1, ev2 with
-                  | VObj v1, VObj v2 -> failwith "comparing two objects is not implemented"
+                  | VObj v1, VObj v2 -> VBool (v1.fields == v2.fields) (*comparer physiquement les tables de hachage*)
                   | _, _ -> VBool true
                 )
 
@@ -134,7 +151,8 @@ let exec_prog (p: program): unit =
 
       | Get mem -> evalvar mem
       | New x -> VObj (evalnew (New x))
-      | MethCall (e,name,param) -> eval_call name e param; Null  
+      | MethCall (e,name,param) -> eval_call name e param  (*e : objet, param: parametre de la fonction*)
+      | This -> Hashtbl.find lenv "this"
       | _ -> failwith "case not implemented in eval"
     in
   
@@ -162,10 +180,13 @@ let exec_prog (p: program): unit =
                         Hashtbl.replace env x (eval e)
                       else
                         failwith "undefined variable"
-          | _ -> failwith "not implemented bis"
+          | Field (exp_obj, attribute) -> 
+            let obj = evalo exp_obj in 
+
+            Hashtbl.replace obj.fields attribute (eval e)
         )
       | Expr(e) -> let _ = eval e in () (*faire un match : si c'est une méthode appeler eval sinon renvoyer une erreur*)
-      | _ -> failwith "case not implemented in exec" (*penser au cas du return, eval_call doit renvoyer e avec la bonne étiquette ou void*)
+      | Return(e) -> return_exp := eval e
     and exec_seq s = 
       List.iter exec s
     in

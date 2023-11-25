@@ -106,6 +106,8 @@ expression:
 | NEW x=IDENT LPAR params=separated_list(COMMA, expression) RPAR {NewCstr(x,params) } 
 (*method*)
 | e=expression DOT name=IDENT LPAR param=separated_list(COMMA,expression) RPAR {MethCall(e,name,param)}
+(*this pour param implicite dans la classe*)
+| THIS { This }
 ;
 
 %inline binop:
@@ -127,4 +129,5 @@ expression:
 %inline unop:
 | NOT { Not }
 | MINUS { Opp }
+
 ;
