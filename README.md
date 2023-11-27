@@ -21,6 +21,13 @@ Rajouter des tests qui sont censés planter pour illustrer les erreurs de syntax
 - les types des paramètres pour `eval_call`
 - `-` : les expressions commes `x-3` donnent une erreur de syntaxe car un chiffre est defini avec l'option `[-]?`, est-ce qu'on peut juste la retirer ? 
 
+
+- Typage : 
+      ```
+      var point p;
+      ```
+      s'assurer que `point` est bien définie
+
 ---
 # To use menhir in Ubuntu
 ```

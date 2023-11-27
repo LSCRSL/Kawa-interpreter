@@ -28,7 +28,7 @@
 %left LT LTE GT GTE ISEQUAL NOTEQUAL
 %left PLUS MINUS
 %left STAR DIV MODULO
-%nonassoc DOT  (*priorité la plus élevée pour accéder à un attribut ?*)
+%left DOT  (*priorité la plus élevée pour accéder à un attribut ?*)
 
 %start program
 %type <Kawa.program> program
