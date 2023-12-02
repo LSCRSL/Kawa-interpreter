@@ -14,6 +14,13 @@ and obj = {
 exception Error of string
 exception Return of value
 
+let print_value v = match v with
+| VInt n -> Printf.printf "%d\n" n
+| VBool b -> Printf.printf "%b\n" b
+| VObj _ -> Printf.printf "class\n"
+| Null -> Printf.printf "null\n"
+
+
 let exec_prog (p: program): unit =
   let env = Hashtbl.create 16 in
   let return_exp = ref Null in
@@ -120,7 +127,7 @@ let exec_prog (p: program): unit =
       | Bool b -> VBool b
 
       | Binop(op, e1, e2) -> (match op with
-        | Add -> VInt (evali e1 + evali e2)
+        | Add -> (*let () = print_value (eval e1) in *) VInt (evali e1 + evali e2)
         | Sub -> VInt (evali e1 - evali e2)
         | Mul -> VInt (evali e1 * evali e2)
         | Div -> VInt (evali e1 / evali e2)

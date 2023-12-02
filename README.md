@@ -1,12 +1,13 @@
 # Compilation
 
 # Remarques
-- deux objets sont égaux si el seulement s'ils sont physiquement le même objet : modifier le cas d'égalité lorsqu'on compare deux objets -> est-ce aue ca suffit de comparer les tables de hachage avec l'opérateur `==` de `Ocaml` ?
+- deux objets sont égaux si el seulement s'ils sont physiquement le même objet : modifier le cas d'égalité lorsqu'on compare deux objets -> est-ce que ca suffit de comparer les tables de hachage avec l'opérateur `==` de `Ocaml` ?
 - rendre les opérateurs et/ou de la logique paresseux  -> OK
 - gérer l'heritage, lors d'un appel de fonction, on veut pouvoir remonter dans les différentes
 - gérer l'acces au parametre implicite this dans l'appel de methode -> OK
-- verification des types dans appel de fonctions (il faut matcher avec la déclaration de la methode)
+- verification des types dans appel de fonctions (il faut matcher avec la déclaration de la methode) -> OK
 - penser au constructeur --> OK
+- verifier que les types des variables globales existent
 
 # Tests
 Rajouter des tests qui sont censés planter pour illustrer les erreurs de syntaxe possible

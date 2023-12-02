@@ -12,15 +12,58 @@ type tenv = typ Env.t
 let add_env l tenv =
   List.fold_left (fun env (x, t) -> Env.add x t env) tenv l
 
+
 let typecheck_prog p =
   let tenv = add_env p.globals Env.empty in
 
-  let rec check e typ tenv =
+  let rec find_class_def class_name = 
+    let get_first_element class_def_filter = 
+      match class_def_filter with 
+        | [] ->  failwith "the class is not implemented"
+        | e::[] -> e
+        | _ -> failwith "multiple classes have the same name"
+    in 
+    (*liste des classes dans le programme*)
+    let class_list = p.classes in 
+    (*recuperer la classe de objet*)
+    let class_def_filter =  (*retourne une liste*)
+        List.filter (fun cls_def -> (cls_def.class_name = class_name)) class_list in
+    (*premier element de la liste*)
+    get_first_element class_def_filter
+
+  and check e typ tenv =
+    let rec explore_parents node cls target = 
+      if cls = target then ()
+      else let class_def = find_class_def cls in 
+      match class_def.parent with
+      | Some parent -> explore_parents node parent target 
+      | None -> type_error (TClass node) (TClass target) 
+
+    in 
+
     let typ_e = type_expr e tenv in
-    if typ_e <> typ then type_error typ_e typ
+    match typ_e with
+    | TInt | TBool | TVoid -> if typ_e <> typ then type_error typ_e typ
+    | TClass class_name -> (match typ with
+        | TBool | TInt | TVoid -> type_error typ_e typ
+        | TClass class_target -> explore_parents class_name class_name class_target)
+
+
+
+  and check_class cls_def tenv = 
+    (*ajouter les attributs à l'env*)
+    let tenv_attr = add_env cls_def.attributes tenv in
+    (*boucler sur les methodes, rajouter les attibuts à l'env + appel check_mcall*)
+    List.iter (fun method_def -> check_mdef method_def (add_env method_def.params tenv_attr)) cls_def.methods
+
+  and check_mdef method_def tenv = 
+    (*rajouter les variables locales*)
+    let tenv_locals = add_env method_def.locals tenv in 
+    (*appeler checkseq sur le code de la fonction*)
+    check_seq method_def.code method_def.return tenv_locals
   
   
-  and type_mthcall class_name mthd_name params =
+  and type_mthcall class_name mthd_name params : typ =
     (*chercher dans programme la définition de classe correspondante*)
     let get_first_element class_def_filter = 
       match class_def_filter with 
@@ -66,6 +109,7 @@ let typecheck_prog p =
     | New class_name -> TClass class_name
     | NewCstr (class_name, params) -> (*vérifier que les params sont cohérents*)
                                     let t = type_mthcall class_name "constructor" params in
+                                    (*verifier que le type de retour du constructeur est void*)
                                     let () = (match t with
                                       | TVoid -> ()
                                       | _ -> failwith "Constructor should have return type void")
@@ -81,22 +125,44 @@ let typecheck_prog p =
             
   and type_mem_access (m : mem_access) tenv = match m with
     | Var x -> (try  Env.find x tenv  with Not_found -> failwith "undeclared variabe")
-    | _ -> failwith "case not implemented in type_mem_access"
-  in
+    | Field (obj, x) -> 
+      let class_name = (match type_expr obj tenv with
+      | TClass name -> name
+      | _ -> failwith "not a class")
+      in 
+      (*chercher la def correspondante -> modifier si on a l'héritage*)
+      let get_first_element class_def_filter = 
+        match class_def_filter with 
+          | [] ->  failwith "the class is not implemented"
+          | e::[] -> e
+          | _ -> failwith "multiple classes have the same name"
+      in
+      (*chercher dans classes la definition qu'on veut*)
+      let class_def_filter = List.filter (fun cls_def -> (cls_def.class_name = class_name)) p.classes in
+      let class_def = get_first_element class_def_filter in
+      (*verifier qu'il y a un attribut x*)
+      let rec find_attribute attr_list = 
+          match attr_list with 
+          | [] -> failwith "undefined attribute"
+          | (attr_name, attr_type)::suite -> if attr_name = x then attr_type else find_attribute suite 
+      in find_attribute class_def.attributes
 
-  let rec check_instr i ret tenv = match i with
+
+  and check_instr i ret tenv = match i with
     | Print e -> (match type_expr e tenv with
                   | TInt | TBool -> ()
                   | _ -> failwith "à compléter")
     | Set (x, e) -> let t = type_mem_access x tenv in check e t tenv
-    | If (e, s1, s2) -> check e TBool tenv; check_seq s1 ret tenv; check_seq s2  ret tenv
+    | If (e, s1, s2) -> check e TBool tenv; check_seq s1 ret tenv; check_seq s2 ret tenv
     | While(e, s) -> check e TBool tenv; check_seq s ret tenv;
     (* Fin d'une fonction *)
     | Return e -> check e ret tenv
-  (* Expression utilisée comme instruction *)
+    (* Expression utilisée comme instruction *)
     | Expr e -> check e TVoid tenv
   and check_seq s ret tenv =
     List.iter (fun i -> check_instr i ret tenv) s
+
   in
 
+  List.iter (fun cls_def -> check_class cls_def (Env.add "this" (TClass cls_def.class_name) tenv)) p.classes;
   check_seq p.main TVoid tenv

@@ -1,0 +1,35 @@
+var point p;
+var origine o;
+var int x;
+class point {
+    attribute int x;
+    attribute int y;
+
+    // declaration
+    method int test (int px) {
+        var int l;
+        this.x = px;
+        l = 4;
+        return l+1;
+    }
+
+    method void test_heritage(point p) {
+        print(true);
+    }
+}
+
+class origine extends point {
+    method void test_heritage_2(origine p) {
+        print(true);
+    }
+}
+
+main {
+    p = new point;
+    o = new origine; 
+    o.test_heritage_2(p);
+    o.x = 2;
+    p.y = 7;
+    x = p.test(3);
+    print(x);
+}
