@@ -9,6 +9,8 @@
 - penser au constructeur --> OK
 - verifier que les types des variables globales existent
 - peut on lancer des erreurs avec menhir
+- est-ce qu'il faut lancer une erreur précise si on ne construit pas un objet avec new avant d'accèder à ses attributs
+- cas `let x, x = ...`
 
 # Tests
 Rajouter des tests qui sont censés planter pour illustrer les erreurs de syntaxe possible

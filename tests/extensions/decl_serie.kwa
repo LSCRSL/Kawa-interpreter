@@ -1,0 +1,31 @@
+var int x, z;
+var bool b;
+
+var point a;
+var point b;
+
+class point {
+    attribute int x, y;
+    attribute bool b;
+
+    method int test (int px) {
+        var int l, m, n;
+        l = px;
+        m = -1;
+        n = 1;
+        return l+1+m+n;
+    }
+}
+
+main {
+    x = 1;
+    z = 6;
+    b = true;
+    a = new point;
+    a.y = 9;
+    print(x);
+    print(b);
+    print(a.y);
+    print(a.test(3));
+    // affiche 1 true 9 4
+}

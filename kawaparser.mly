@@ -36,12 +36,27 @@
 %%
 
 program:
-| global_var=list(var_global) cls=list(class_def) MAIN BEGIN main=list(instruction) END EOF
-    { {classes=cls; globals=global_var; main} }
+| global_var=list(var_decl) cls=list(class_def) MAIN BEGIN main_code=list(instruction) END EOF
+    { (*concaténer les listes de déclarations*)
+      let rec aux liste acc_decl acc_instr = 
+      match liste with 
+      | [] -> (acc_decl, acc_instr)
+      | (l1, l2)::suite -> aux suite (l1 @ acc_decl) (acc_instr @ l2)
+      in let acc_tuple = aux global_var [] [] in
+      {classes=cls; globals=(fst acc_tuple); main=(snd acc_tuple) @ main_code} }
 ;
 
-var_global :
-|VAR t=type_decl name=IDENT SEMI {(name,t)}
+var_decl:
+| VAR t=type_decl names=separated_list(COMMA,IDENT) SEMI { let tuples_list = List.map (fun name -> (name,t)) names in (tuples_list, []) }
+| VAR t=type_decl names=separated_list(COMMA,IDENT) SET values=separated_list(COMMA,expression) SEMI { 
+    let rec map_ident_val names values tuples_list instr_list = 
+        match names, values with 
+        | [], [] -> (tuples_list, instr_list)
+        | _::_, [] -> failwith "not enough values to unpack"
+        | [], _::_ -> failwith "too many values to unpack"
+        | name::s1, value::s2 -> map_ident_val s1 s2 ((name, t)::tuples_list) (Set(Var name, value)::instr_list)
+    in map_ident_val names values [] []
+ }
 ;
 
 type_decl:
@@ -53,16 +68,37 @@ type_decl:
 
 (*rajouter les methodes*)
 class_def:
-| CLASS cls=IDENT BEGIN attr=list(attribute_declaration) mthd=list(method_def) END { {class_name=cls; attributes=attr; methods=mthd; parent=None}}
-| CLASS cls=IDENT EXTENDS parent_name=IDENT BEGIN attr=list(attribute_declaration) mthd=list(method_def) END {{class_name=cls; attributes=attr; methods=mthd; parent=Some parent_name}}
+| CLASS cls=IDENT BEGIN attr=list(attribute_declaration) mthd=list(method_def) END { 
+    let rec aux liste acc = 
+      match liste with 
+      | [] -> acc 
+      | l::suite -> aux suite (l @ acc)
+      in let attr_list = aux attr [] in
+    {class_name=cls; attributes=attr_list; methods=mthd; parent=None}
+  }
+| CLASS cls=IDENT EXTENDS parent_name=IDENT BEGIN attr=list(attribute_declaration) mthd=list(method_def) END {
+    let rec aux liste acc = 
+      match liste with 
+      | [] -> acc 
+      | l::suite -> aux suite (l @ acc)
+      in let attr_list = aux attr [] in
+    {class_name=cls; attributes=attr_list; methods=mthd; parent=Some parent_name}
+  }
 ;
 
 attribute_declaration:
-| ATTRIBUTE t=type_decl attr=IDENT SEMI {(attr, t)}
+| ATTRIBUTE t=type_decl attrs=separated_list(COMMA,IDENT) SEMI { List.map (fun name -> (name,t)) attrs }
 ;
 
 method_def:
-| METHOD t=type_decl name=IDENT LPAR param=separated_list(COMMA,arg) RPAR BEGIN var=list(var_global) instr=list(instruction) END {{method_name=name; code=instr; params=param; locals=var; return=t}}
+| METHOD t=type_decl name=IDENT LPAR param=separated_list(COMMA,arg) RPAR BEGIN var=list(var_decl) instr=list(instruction) END {
+      let rec aux liste acc_decl acc_instr = 
+      match liste with 
+      | [] -> (acc_decl, acc_instr)
+      | (l1, l2)::suite -> aux suite (l1 @ acc_decl) (acc_instr @ l2)
+      in let acc_tuple = aux var [] [] in
+      {method_name=name; code=(snd acc_tuple)@instr; params=param; locals=fst acc_tuple; return=t}
+  }
 ;
 
 arg:

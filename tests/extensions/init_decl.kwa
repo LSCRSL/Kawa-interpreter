@@ -1,0 +1,20 @@
+var int x = 1;
+var int y, z;
+
+var point a = new point(2);
+
+class point {
+    attribute int x, y;
+    attribute bool b;
+
+    method int test (int px) {
+        var int l, m = 1, 2;
+
+        return l+px;
+    }
+}
+
+main {
+    y = a.test(0);
+    print(y);
+}

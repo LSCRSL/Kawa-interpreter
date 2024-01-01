@@ -32,5 +32,5 @@ main {
     p = new point;
     x = p.incr_2(9);
     p.x = 4;
-    print(p.x);
+    print(x);
 }

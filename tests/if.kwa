@@ -3,6 +3,6 @@ main {
         print(true);
     }
     else {
-        print(false)
+        print(false);
     }
 }

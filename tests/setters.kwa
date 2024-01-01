@@ -28,6 +28,8 @@ class origine extends point {}
 main {
     p = new point;
     p.set_x(5);
+    print(p.y);     // null
+    print(p.x);     // 5
     p.set_y(p.x+3);
-    print(p.y);
+    print(p.y);     // 8
 }

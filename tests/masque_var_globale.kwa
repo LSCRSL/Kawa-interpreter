@@ -9,7 +9,7 @@ class point {
         var int x;
         x = px+1;
         this.x = x; 
-        return x;
+        return x; // 4
     }
 }
 
@@ -17,7 +17,6 @@ class origine extends point {}
 
 main {
     p = new point;
-    x = p.test(3);
-    print(p.x);
-    print(-3);
+    x = p.test(3); 
+    print(p.x); // 4
 }

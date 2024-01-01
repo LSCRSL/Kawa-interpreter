@@ -39,6 +39,6 @@ main {
   print(s.a.x + s.a.y + s.b.x + s.b.y);
   // affiche 10
   m = new paire(1, 2);
-  print(m.x - m.y);
+  print(m.x - m.y); // -1
   print(---3);
 }

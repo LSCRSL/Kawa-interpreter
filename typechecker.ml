@@ -14,7 +14,9 @@ let add_env l tenv =
 
 
 let typecheck_prog p =
-  let tenv = add_env p.globals Env.empty in
+  let tenv_ = add_env p.globals Env.empty in
+  
+
   let rec find_cls_def class_name =
     let get_first_element class_def_filter = 
       match class_def_filter with 
@@ -25,8 +27,8 @@ let typecheck_prog p =
     let class_list = p.classes in 
     let class_def_filter = List.filter (fun cls_def -> (cls_def.class_name = class_name)) class_list in
     get_first_element class_def_filter 
-  in
-  let rec find_mthd_def class_name mthd_name =
+  
+  and find_mthd_def class_name mthd_name =
     let class_def = find_cls_def class_name in
     let method_list = List.filter (fun method_def -> (method_def.method_name = mthd_name)) class_def.methods in
 
@@ -69,7 +71,7 @@ let typecheck_prog p =
     check_seq method_def.code method_def.return tenv_locals
   
   
-  and type_mthcall class_name mthd_name params : typ =
+  and type_mthcall (class_name : string) (mthd_name : string) (params : expr list) tenv : typ =
     (*recherche de la methode dans parent*)
     let mthd = find_mthd_def class_name mthd_name in
     let args = mthd.params in 
@@ -99,7 +101,7 @@ let typecheck_prog p =
     | This -> Env.find "this" tenv (*comment mettre à jour tenv pour qu'il contienne this*)
     | New class_name -> TClass class_name
     | NewCstr (class_name, params) -> (*vérifier que les params sont cohérents*)
-                                    let t = type_mthcall class_name "constructor" params in
+                                    let t = type_mthcall class_name "constructor" params tenv in
                                     (*verifier que le type de retour du constructeur est void*)
                                     let () = (match t with
                                       | TVoid -> ()
@@ -109,13 +111,17 @@ let typecheck_prog p =
     | MethCall (e, method_name, params) -> let class_type = type_expr e tenv in
             (*recup la nom de la classe*)
             let class_name = (match class_type with
-            | TClass x -> x
+            | TClass x -> x;
             | _ -> assert false ) in
-            type_mthcall class_name method_name params
+            (*ajouter les attributs à l'environnement*)
+            type_mthcall class_name method_name params tenv
 
             
   and type_mem_access (m : mem_access) tenv = match m with
-    | Var x -> (try  Env.find x tenv  with Not_found -> failwith "undeclared variabe")
+    | Var x ->
+          (*let () = Env.iter (fun key value -> Printf.printf "%s : " key) tenv in 
+          Printf.printf "\n";*)
+          (try  Env.find x tenv with Not_found -> failwith "undeclared variabe")
     | Field (obj, x) -> 
       let class_name = (match type_expr obj tenv with
       | TClass name -> name
@@ -149,5 +155,5 @@ let typecheck_prog p =
 
   in
 
-  List.iter (fun cls_def -> check_class cls_def (Env.add "this" (TClass cls_def.class_name) tenv)) p.classes;
-  check_seq p.main TVoid tenv
+  List.iter (fun cls_def -> check_class cls_def (Env.add "this" (TClass cls_def.class_name) tenv_)) p.classes;
+  check_seq p.main TVoid tenv_

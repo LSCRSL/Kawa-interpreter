@@ -20,6 +20,9 @@ let print_value v = match v with
 | VObj _ -> Printf.printf "class\n"
 | Null -> Printf.printf "null\n"
 
+let print_expr_option e_opt = match e_opt with
+| None -> Printf.printf "None" 
+| Some _ -> Printf.printf "Some"
 
 let exec_prog (p: program): unit =
   let find_cls_def class_name =
@@ -71,10 +74,10 @@ let exec_prog (p: program): unit =
         (*environnement local pour exécuter la fonction*)
         let local_env = Hashtbl.create 16 in
         (*ajouter l'objet courant à l'environnement*)
-        let () = Hashtbl.add local_env "this" (VObj this) in
-        (*verification de type en parametre (appel typechecker)*)
-        let rec param_to_env args params = match args,params with 
-          | e1::l1, (name, typ)::l2 ->  Hashtbl.add local_env name (eval e1);
+        let () = Hashtbl.replace local_env "this" (VObj this) in
+
+        let rec param_to_env args params = match args, params with 
+          | e1::l1, (name, _)::l2 ->  Hashtbl.replace local_env name (eval e1);
                                         param_to_env l1 l2;
           | [], [] -> ()
           | _,_ -> failwith "the number of parameters is incorrect"
@@ -82,8 +85,7 @@ let exec_prog (p: program): unit =
       let () = param_to_env args mthd.params in
       (*ajouter les variables locales*)
       let rec locals_to_env lcls = match lcls with 
-      | (name,typ)::l ->  Hashtbl.add local_env name Null;
-                          locals_to_env l;
+      | (name,typ)::l -> let () = Hashtbl.replace local_env name Null in locals_to_env l;
       | [] -> ()
     in 
     let () = locals_to_env mthd.locals in 
@@ -103,6 +105,7 @@ let exec_prog (p: program): unit =
       | Field(e, attribute) -> 
               let obj_ = evalo e in 
               Hashtbl.find obj_.fields attribute
+              
 
     and evalnew(x : expr) = 
       (*creer un nouvel objet*)
@@ -113,14 +116,15 @@ let exec_prog (p: program): unit =
         (*environnement pour les attributs*)
         let attr_env = Hashtbl.create 8 in 
         let update class_def = 
-          List.iter (fun (attr_name, attr_type) -> Hashtbl.add attr_env attr_name Null) class_def.attributes in
+          List.iter (fun (attr_name, attr_type) -> Hashtbl.add attr_env attr_name Null) class_def.attributes in 
         let rec found_mother class_def =
           match class_def.parent with 
           | None -> ()
           | Some parent_class_name -> let mother_def = find_cls_def parent_class_name in 
-                                      update (mother_def);
+                                      update mother_def;
                                       found_mother mother_def
         in
+        let () = update class_def in
         let () = found_mother class_def in
         class_def,{cls=class_name; fields=attr_env};
       in
@@ -186,8 +190,8 @@ let exec_prog (p: program): unit =
             match v with 
             | VInt n -> Printf.printf "%d\n" n
             | VBool b -> Printf.printf "%b\n" b
-            | VObj _ -> Printf.printf "objet"
-            | Null -> Printf.printf "null"
+            | VObj _ -> Printf.printf "objet\n"
+            | Null -> Printf.printf "null\n"
           )
       | If(e, s1, s2) -> let v = evalb e in if v = true then exec_seq s1 else exec_seq s2
       | While(e, s) -> let v = evalb e in 
@@ -205,9 +209,9 @@ let exec_prog (p: program): unit =
                       else
                         failwith "undefined variable"
           | Field (exp_obj, attribute) -> 
-            let obj = evalo exp_obj in 
+            let obj_ = evalo exp_obj in 
 
-            Hashtbl.replace obj.fields attribute (eval e)
+            Hashtbl.replace obj_.fields attribute (eval e);
         )
       | Expr(e) -> let _ = eval e in () (*faire un match : si c'est une méthode appeler eval sinon renvoyer une erreur*)
       | Return(e) -> return_exp := eval e
@@ -216,4 +220,4 @@ let exec_prog (p: program): unit =
     in
     exec_seq s
   in
-  exec_seq p.main (Hashtbl.create 1)
+  exec_seq p.main (Hashtbl.create 5)
