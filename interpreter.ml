@@ -22,6 +22,31 @@ let print_value v = match v with
 
 
 let exec_prog (p: program): unit =
+  let find_cls_def class_name =
+    let get_first_element class_def_filter = 
+      match class_def_filter with 
+        | [] ->  failwith "the class is not implemented"
+        | e::[] -> e
+        | _ -> failwith "multiple classes have the same name"
+    in
+    let class_list = p.classes in 
+    let class_def_filter = List.filter (fun cls_def -> (cls_def.class_name = class_name)) class_list in
+    get_first_element class_def_filter 
+  in
+  let rec find_mthd_def class_name mthd_name =
+    let class_def = find_cls_def class_name in
+    let method_list = List.filter (fun method_def -> (method_def.method_name = mthd_name)) class_def.methods in
+
+    let get_mthd mthd_list = 
+      match mthd_list with 
+      | [] -> (match class_def.parent with 
+              | None -> failwith "the method is not implemented"
+              | Some parent_cls_name -> find_mthd_def parent_cls_name mthd_name)
+      | e::[] -> e
+      | _ -> failwith "surcharge non implémentée"
+    in 
+    get_mthd method_list
+  in
   let env = Hashtbl.create 16 in
   let return_exp = ref Null in
   (*rajouter les variables globales dans env*)
@@ -42,23 +67,7 @@ let exec_prog (p: program): unit =
     and eval_call (f: string) (this: obj) (args : expr list) =
         (*let objet = (evalo this) in*)
         let class_name = this.cls in 
-
-        let get_first_element class_def_filter = 
-          match class_def_filter with 
-            | [] ->  failwith "the class is not implemented"
-            | e::[] -> e
-            | _ -> failwith "multiple classes have the same name"
-        in 
-        (*liste des classes dans le programme*)
-        let class_list = p.classes in 
-        (*recuperer la classe de objet*)
-        let class_def_filter =  (*retourne une liste*)
-            List.filter (fun cls_def -> (cls_def.class_name = class_name)) class_list in
-        (*premier element de la liste*)
-        let class_def = get_first_element class_def_filter in
-        (*a modifier si on veut autoriser la surcharge*)
-        let method_list = List.filter (fun method_def -> (method_def.method_name = f)) class_def.methods in
-        let mthd = get_first_element method_list in 
+        let mthd = find_mthd_def class_name f in
         (*environnement local pour exécuter la fonction*)
         let local_env = Hashtbl.create 16 in
         (*ajouter l'objet courant à l'environnement*)
@@ -92,25 +101,27 @@ let exec_prog (p: program): unit =
                     failwith "undefined variable"
                     
       | Field(e, attribute) -> 
-              let obj = evalo e in 
-              Hashtbl.find obj.fields attribute
+              let obj_ = evalo e in 
+              Hashtbl.find obj_.fields attribute
 
     and evalnew(x : expr) = 
       (*creer un nouvel objet*)
-      let get_first_element class_def_filter = 
-        match class_def_filter with 
-          | [] ->  failwith "the class is not implemented"
-          | e::[] -> e
-          | _ -> failwith "multiple classes have the same name"
-      in
+      
       let init_object class_name = 
         (*chercher dans classes la definition qu'on veut*)
-        let class_list = p.classes in 
-        let class_def_filter = List.filter (fun cls_def -> (cls_def.class_name = class_name)) class_list in
-        let class_def = get_first_element class_def_filter in 
+        let class_def = find_cls_def class_name in 
         (*environnement pour les attributs*)
         let attr_env = Hashtbl.create 8 in 
-        let () = List.iter (fun (attr_name, attr_type) -> Hashtbl.add attr_env attr_name Null) class_def.attributes in
+        let update class_def = 
+          List.iter (fun (attr_name, attr_type) -> Hashtbl.add attr_env attr_name Null) class_def.attributes in
+        let rec found_mother class_def =
+          match class_def.parent with 
+          | None -> ()
+          | Some parent_class_name -> let mother_def = find_cls_def parent_class_name in 
+                                      update (mother_def);
+                                      found_mother mother_def
+        in
+        let () = found_mother class_def in
         class_def,{cls=class_name; fields=attr_env};
       in
       match x with

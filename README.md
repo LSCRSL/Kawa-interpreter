@@ -8,6 +8,7 @@
 - verification des types dans appel de fonctions (il faut matcher avec la déclaration de la methode) -> OK
 - penser au constructeur --> OK
 - verifier que les types des variables globales existent
+- peut on lancer des erreurs avec menhir
 
 # Tests
 Rajouter des tests qui sont censés planter pour illustrer les erreurs de syntaxe possible
@@ -30,6 +31,13 @@ Rajouter des tests qui sont censés planter pour illustrer les erreurs de syntax
       s'assurer que `point` est bien définie
 
 ---
+# Idée rapport
+- parler de l'organisation des fichiers --> essayer de rajouter un fichier helper.ml
+- parler de tests
+- expliquer le code notamment typechecker
+- explication sur la partie consacrée à l'héritage
+- expliquer comment nous avons gérer le "return"
+- associativité de .(dot)
 # To use menhir in Ubuntu
 ```
 eval `opam env`

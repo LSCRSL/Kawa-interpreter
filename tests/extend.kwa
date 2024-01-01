@@ -15,6 +15,9 @@ class paire {
   method int somme() {
     return this.x + this.y;
   }
+  method int diff() {
+    return this.x - this.y;
+  }
 }
 
 class triple extends paire {
@@ -40,8 +43,9 @@ main {
   t = new triple(3, 4, 5);
   print(p.somme());
   print(t.somme());
+  print(t.diff());
   print(t.produit());
   pt = new triple(1, 2,3);
   print(pt.somme());
-  // affiche 3, puis 12, puis 60, puis 6.
+  // affiche 3, puis 12, puis -1, puis 60, puis 6.
 }

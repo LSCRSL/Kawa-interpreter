@@ -15,30 +15,38 @@ let add_env l tenv =
 
 let typecheck_prog p =
   let tenv = add_env p.globals Env.empty in
-
-  let rec find_class_def class_name = 
+  let rec find_cls_def class_name =
     let get_first_element class_def_filter = 
       match class_def_filter with 
         | [] ->  failwith "the class is not implemented"
         | e::[] -> e
         | _ -> failwith "multiple classes have the same name"
-    in 
-    (*liste des classes dans le programme*)
+    in
     let class_list = p.classes in 
-    (*recuperer la classe de objet*)
-    let class_def_filter =  (*retourne une liste*)
-        List.filter (fun cls_def -> (cls_def.class_name = class_name)) class_list in
-    (*premier element de la liste*)
-    get_first_element class_def_filter
+    let class_def_filter = List.filter (fun cls_def -> (cls_def.class_name = class_name)) class_list in
+    get_first_element class_def_filter 
+  in
+  let rec find_mthd_def class_name mthd_name =
+    let class_def = find_cls_def class_name in
+    let method_list = List.filter (fun method_def -> (method_def.method_name = mthd_name)) class_def.methods in
+
+    let get_mthd mthd_list = 
+      match mthd_list with 
+      | [] -> (match class_def.parent with 
+              | None -> failwith "the method is not implemented"
+              | Some parent_cls_name -> find_mthd_def parent_cls_name mthd_name)
+      | e::[] -> e
+      | _ -> failwith "surcharge non implémentée"
+    in 
+    get_mthd method_list
 
   and check e typ tenv =
     let rec explore_parents node cls target = 
       if cls = target then ()
-      else let class_def = find_class_def cls in 
+      else let class_def = find_cls_def cls in 
       match class_def.parent with
       | Some parent -> explore_parents node parent target 
       | None -> type_error (TClass node) (TClass target) 
-
     in 
 
     let typ_e = type_expr e tenv in
@@ -47,8 +55,6 @@ let typecheck_prog p =
     | TClass class_name -> (match typ with
         | TBool | TInt | TVoid -> type_error typ_e typ
         | TClass class_target -> explore_parents class_name class_name class_target)
-
-
 
   and check_class cls_def tenv = 
     (*ajouter les attributs à l'env*)
@@ -64,23 +70,8 @@ let typecheck_prog p =
   
   
   and type_mthcall class_name mthd_name params : typ =
-    (*chercher dans programme la définition de classe correspondante*)
-    let get_first_element class_def_filter = 
-      match class_def_filter with 
-        | [] ->  failwith "the class is not implemented"
-        | e::[] -> e
-        | _ -> failwith "multiple classes have the same name"
-    in 
-    (*liste des classes dans le programme*)
-    let class_list = p.classes in 
-    (*recuperer la classe de objet*)
-    let class_def_filter =  (*retourne une liste*)
-        List.filter (fun cls_def -> (cls_def.class_name = class_name)) class_list in
-    (*premier element de la liste*)
-    let class_def = get_first_element class_def_filter in
-    (*a modifier si on veut autoriser la surcharge*)
-    let method_list = List.filter (fun method_def -> (method_def.method_name = mthd_name)) class_def.methods in
-    let mthd = get_first_element method_list in
+    (*recherche de la methode dans parent*)
+    let mthd = find_mthd_def class_name mthd_name in
     let args = mthd.params in 
     let rec verif_type_params args params = 
       match args,params with
@@ -129,24 +120,18 @@ let typecheck_prog p =
       let class_name = (match type_expr obj tenv with
       | TClass name -> name
       | _ -> failwith "not a class")
-      in 
-      (*chercher la def correspondante -> modifier si on a l'héritage*)
-      let get_first_element class_def_filter = 
-        match class_def_filter with 
-          | [] ->  failwith "the class is not implemented"
-          | e::[] -> e
-          | _ -> failwith "multiple classes have the same name"
       in
-      (*chercher dans classes la definition qu'on veut*)
-      let class_def_filter = List.filter (fun cls_def -> (cls_def.class_name = class_name)) p.classes in
-      let class_def = get_first_element class_def_filter in
-      (*verifier qu'il y a un attribut x*)
-      let rec find_attribute attr_list = 
-          match attr_list with 
-          | [] -> failwith "undefined attribute"
-          | (attr_name, attr_type)::suite -> if attr_name = x then attr_type else find_attribute suite 
-      in find_attribute class_def.attributes
-
+      let rec look_for_attribute_and_parents class_name = 
+        let class_def = find_cls_def class_name in
+        (*verifier qu'il y a un attribut x*)
+        let rec find_attribute attr_list = 
+            match attr_list with 
+            | [] -> (match class_def.parent with 
+                    | None -> failwith "this attribute does not exist"
+                    | Some parent_class_name -> look_for_attribute_and_parents parent_class_name)
+            | (attr_name, attr_type)::suite -> if attr_name = x then attr_type else find_attribute suite 
+        in find_attribute class_def.attributes
+      in look_for_attribute_and_parents class_name
 
   and check_instr i ret tenv = match i with
     | Print e -> (match type_expr e tenv with
