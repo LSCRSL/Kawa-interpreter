@@ -12,6 +12,10 @@
 - est-ce qu'il faut lancer une erreur précise si on ne construit pas un objet avec new avant d'accèder à ses attributs
 - cas `let x, x = ...`
 - envoyer mail concernant l'initialisation d'un attribut dans une classe fille 
+- dans typechecker, pas besoin de rajouter les attributs d'une classe à l'env (même ca induit le typechecker en erreur dans le cas où on n'utilise pas this)
+- si une méthode n'a pas le type de retour void, faut-il forcer un return ?
+- ne pas pouvoir modifier un attribut final dans une classe fille
+- initialiser un attribut final une seule fois
 
 # Tests
 Rajouter des tests qui sont censés planter pour illustrer les erreurs de syntaxe possible

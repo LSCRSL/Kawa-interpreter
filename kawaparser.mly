@@ -2,6 +2,7 @@
 
   open Lexing
   open Kawa
+  open Helper
 
 %}
 
@@ -39,24 +40,17 @@
 program:
 | global_var=list(var_decl) cls=list(class_def) MAIN BEGIN main_code=list(instruction) END EOF
     { (*concaténer les listes de déclarations*)
-      let rec aux liste acc_decl acc_instr = 
-      match liste with 
-      | [] -> (acc_decl, acc_instr)
-      | (l1, l2)::suite -> aux suite (l1 @ acc_decl) (acc_instr @ l2)
-      in let acc_tuple = aux global_var [] [] in
+      let acc_tuple = aux global_var [] [] in
       {classes=cls; globals=(fst acc_tuple); main=(snd acc_tuple) @ main_code} }
 ;
 
 var_decl:
-| VAR t=type_decl names=separated_list(COMMA,IDENT) SEMI { let tuples_list = List.map (fun name -> (name,t)) names in (tuples_list, []) }
+| VAR t=type_decl names=separated_list(COMMA,IDENT) SEMI { 
+      let tuples_list = List.map (fun name -> (name,t)) names 
+      in (tuples_list, []) 
+  }
 | VAR t=type_decl names=separated_list(COMMA,IDENT) SET values=separated_list(COMMA,expression) SEMI { 
-    let rec map_ident_val names values tuples_list instr_list = 
-        match names, values with 
-        | [], [] -> (tuples_list, instr_list)
-        | _::_, [] -> failwith "not enough values to unpack"
-        | [], _::_ -> failwith "too many values to unpack"
-        | name::s1, value::s2 -> map_ident_val s1 s2 ((name, t)::tuples_list) (Set(Var name, value)::instr_list)
-    in map_ident_val names values [] []
+      map_ident_val_variables t names values [] []
  }
 ;
 
@@ -69,49 +63,15 @@ type_decl:
 
 (*rajouter les methodes*)
 class_def:
-| CLASS cls=IDENT BEGIN attr_final = list(attribute_declaration) attr=list(attribute_declaration) mthd=list(method_def) END { 
-    let rec aux liste acc_decl acc_instr = 
-      match liste with 
-      | [] -> (acc_decl, acc_instr)
-      | (l1, l2)::suite -> aux suite (l1 @ acc_decl) (acc_instr @ l2)
-      in let acc_tuple = aux attr [] [] in
-    
-    (*modifier constructeur*)
-    let method_list = List.filter (fun method_def -> (method_def.method_name = "constructor")) mthd in
-    let new_mthd_list = match method_list with 
-      | [] -> let mthd_constr = {method_name="constructor";code=(snd acc_tuple); params=[]; locals=[]; return=TVoid} in 
-              mthd_constr::mthd
-      | e::[] -> e.code <- (snd acc_tuple)@ e.code;
-                mthd
-      | e::l -> failwith "too many constructor"
-    in
-    let decl_list = fst acc_tuple in 
-    let rec separate_attributes decl_liste (attr_list : 'a list) attr_final_list = 
-        match decl_liste with 
-        | [] -> (attr_list, attr_final_list)
-        | (name, t, is_final)::suite -> if is_final then separate_attributes suite attr_list ((name,t)::attr_final_list)
-                                        else separate_attributes suite ((name,t)::attr_list) attr_final_list
-    in let separated_list_tuple = separate_attributes decl_list [] [] 
-    in
-
-    {class_name=cls; attributes=(fst separated_list_tuple); attributes_final=(snd separated_list_tuple); methods=new_mthd_list; parent=None}
+| CLASS cls=IDENT BEGIN attr=list(attribute_declaration) mthd=list(method_def) END { 
+    let decl_list, set_list = aux attr [] [] in    
+    let attr_typ_list, final_attr_names = get_final_attr decl_list [] [] in
+    {class_name=cls; init_instr=set_list; attributes=attr_typ_list; attributes_final=final_attr_names; methods=mthd; parent=None}
   }
 | CLASS cls=IDENT EXTENDS parent_name=IDENT BEGIN attr=list(attribute_declaration) mthd=list(method_def) END {
-    let rec aux liste acc_decl acc_instr = 
-      match liste with 
-      | [] -> (acc_decl, acc_instr)
-      | (l1, l2)::suite -> aux suite (l1 @ acc_decl) (acc_instr @ l2)
-      in let acc_tuple = aux attr [] [] in
-
-    let decl_list = fst acc_tuple in 
-    let rec separate_attributes decl_liste attr_list attr_final_list = 
-        match decl_liste with 
-        | [] -> (attr_list, attr_final_list)
-        | (name, t, is_final)::suite -> if is_final then separate_attributes suite attr_list ((name,t)::attr_final_list)
-                                        else separate_attributes suite ((name,t)::attr_list) attr_final_list
-    in let separated_list_tuple = separate_attributes decl_list [] [] 
-    in
-    {class_name=cls; attributes=(fst separated_list_tuple); attributes_final=(snd separated_list_tuple); methods=mthd; parent=Some parent_name}
+    let decl_list, set_list = aux attr [] [] in    
+    let attr_typ_list, final_attr_names = get_final_attr decl_list [] [] in
+    {class_name=cls; init_instr=set_list; attributes=attr_typ_list; attributes_final=final_attr_names; methods=mthd; parent=Some parent_name}
   }
 ;
 
@@ -119,23 +79,17 @@ attribute_declaration:
 | ATTRIBUTE FINAL t= type_decl attrs=separated_list(COMMA,IDENT) SEMI {  let tuples_list = List.map (fun name -> (name,t,true)) attrs in (tuples_list, []) }
 | ATTRIBUTE t=type_decl attrs=separated_list(COMMA,IDENT) SEMI {  let tuples_list = List.map (fun name -> (name,t,false)) attrs in (tuples_list, []) }
 | ATTRIBUTE t=type_decl names=separated_list(COMMA,IDENT) SET values=separated_list(COMMA,expression) SEMI { 
-    let rec map_ident_val names values tuples_list instr_list = 
-        match names, values with 
-        | [], [] -> (tuples_list, instr_list)
-        | _::_, [] -> failwith "not enough values to unpack"
-        | [], _::_ -> failwith "too many values to unpack"
-        | name::s1, value::s2 -> map_ident_val s1 s2 ((name, t, false)::tuples_list) (Set(Field(This,name), value)::instr_list)
-    in map_ident_val names values [] []
+    map_ident_val_attributes t false names values [] []
  }
+| ATTRIBUTE FINAL t=type_decl names=separated_list(COMMA,IDENT) SET values=separated_list(COMMA,expression) SEMI { 
+    map_ident_val_attributes t true names values [] []
+ }
+ 
 ;
 
 method_def:
 | METHOD t=type_decl name=IDENT LPAR param=separated_list(COMMA,arg) RPAR BEGIN var=list(var_decl) instr=list(instruction) END {
-      let rec aux liste acc_decl acc_instr = 
-      match liste with 
-      | [] -> (acc_decl, acc_instr)
-      | (l1, l2)::suite -> aux suite (l1 @ acc_decl) (acc_instr @ l2)
-      in let acc_tuple = aux var [] [] in
+      let acc_tuple = aux var [] [] in
       {method_name=name; code=(snd acc_tuple)@instr; params=param; locals=fst acc_tuple; return=t}
   }
 ;

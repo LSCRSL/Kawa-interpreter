@@ -1,0 +1,47 @@
+var cA a;
+var cB b;
+var cD d;
+
+class cA {
+    attribute final int x = 1;
+    attribute int y;
+    attribute bool b = true;
+
+    method void constructor(int y) {
+        this.y = y;
+        this.x = 3;
+    }
+
+    method int test() {
+        // x = 1; on a le droit ?
+        return this.x;
+    }
+}
+
+class cB extends cA {
+    method void print_cB() {
+        print(this.b);
+    }
+}
+
+class cD extends cA {
+    attribute int z = -1;
+
+    method void constructor(int y) {
+        this.y = y + this.x;
+        this.x = this.x - 1;
+        print(this.x);
+    }
+}
+
+main {
+    a = new cA(2);
+    print(a.test());  // 1
+    print(a.b);
+    b = new cB;
+    b.print_cB();     // true
+    // b.x = 4;       // plante car x est final
+    d = new cD(2);    // 0
+    print(d.z);       // -1
+    print(a.x);       // 1
+}

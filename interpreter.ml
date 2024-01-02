@@ -1,4 +1,5 @@
 open Kawa
+open Helper
 
 type value =
   | VInt  of int
@@ -25,35 +26,12 @@ let print_expr_option e_opt = match e_opt with
 | Some _ -> Printf.printf "Some"
 
 let exec_prog (p: program): unit =
-  let find_cls_def class_name =
-    let get_first_element class_def_filter = 
-      match class_def_filter with 
-        | [] ->  failwith "the class is not implemented"
-        | e::[] -> e
-        | _ -> failwith "multiple classes have the same name"
-    in
-    let class_list = p.classes in 
-    let class_def_filter = List.filter (fun cls_def -> (cls_def.class_name = class_name)) class_list in
-    get_first_element class_def_filter 
-  in
-  let rec find_mthd_def class_name mthd_name =
-    let class_def = find_cls_def class_name in
-    let method_list = List.filter (fun method_def -> (method_def.method_name = mthd_name)) class_def.methods in
-
-    let get_mthd mthd_list = 
-      match mthd_list with 
-      | [] -> (match class_def.parent with 
-              | None -> failwith "the method is not implemented"
-              | Some parent_cls_name -> find_mthd_def parent_cls_name mthd_name)
-      | e::[] -> e
-      | _ -> failwith "surcharge non implémentée"
-    in 
-    get_mthd method_list
-  in
   let env = Hashtbl.create 16 in
   let return_exp = ref Null in
   (*rajouter les variables globales dans env*)
   List.iter (fun (x, _) -> Hashtbl.add env x Null) p.globals;
+  (*modifier les classes pour rajouter les final attributes dans final*)
+  
   
   let rec exec_seq s lenv =
     let rec evali e = match eval e with
@@ -70,7 +48,7 @@ let exec_prog (p: program): unit =
     and eval_call (f: string) (this: obj) (args : expr list) =
         (*let objet = (evalo this) in*)
         let class_name = this.cls in 
-        let mthd = find_mthd_def class_name f in
+        let mthd = find_mthd_def class_name f p in
         (*environnement local pour exécuter la fonction*)
         let local_env = Hashtbl.create 16 in
         (*ajouter l'objet courant à l'environnement*)
@@ -112,7 +90,7 @@ let exec_prog (p: program): unit =
       
       let init_object class_name = 
         (*chercher dans classes la definition qu'on veut*)
-        let class_def = find_cls_def class_name in 
+        let class_def = find_cls_def class_name p in 
         (*environnement pour les attributs*)
         let attr_env = Hashtbl.create 8 in 
         let update class_def = 
@@ -120,7 +98,7 @@ let exec_prog (p: program): unit =
         let rec found_mother class_def =
           match class_def.parent with 
           | None -> ()
-          | Some parent_class_name -> let mother_def = find_cls_def parent_class_name in 
+          | Some parent_class_name -> let mother_def = find_cls_def parent_class_name p in 
                                       update mother_def;
                                       found_mother mother_def
         in
@@ -128,13 +106,31 @@ let exec_prog (p: program): unit =
         let () = found_mother class_def in
         class_def,{cls=class_name; fields=attr_env};
       in
+
+      let rec exec_init init_instr_list obj = 
+        match init_instr_list with
+        | [] -> ()
+        | Set(Field(This, x), e)::suite -> 
+              let () = Hashtbl.replace obj.fields x (eval e) 
+              in exec_init suite obj
+        | _ -> failwith "ce cas ne devrait pas être atteignable"
+
+      in let rec init_attributes_current_and_parents class_name obj = 
+          let cls_def = find_cls_def class_name p in  
+          let () = exec_init cls_def.init_instr obj in 
+          match cls_def.parent with
+          | None -> ()
+          | Some parent_class_name -> init_attributes_current_and_parents parent_class_name obj
+    in 
       match x with
         | New class_name -> let cls_def,obj = init_object class_name in
-                            let _ = eval_call "constructor" obj [] in obj
+                            (*initialiser les attributs*)
+                            let () =  init_attributes_current_and_parents class_name obj
+                            in obj 
         | NewCstr (class_name, param) -> let cls_def,obj = init_object class_name in
-                                          (*let mthd_def_filter = List.filter (fun mthd_def -> (mthd_def.method_name = "constructor")) cls_def.methods in
-                                          let constructor = get_first_element mthd_def_filter in*)
-                                          let _ = eval_call "constructor" obj param in obj                         
+                                         let () =  init_attributes_current_and_parents class_name obj in
+                                         let _ = eval_call "constructor" obj param 
+                                         in obj                         
         | _ -> assert false 
 
     and eval (e: expr): value = 

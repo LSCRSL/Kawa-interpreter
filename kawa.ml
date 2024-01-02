@@ -82,8 +82,9 @@ type method_def = {
    paramètre implicite this. *)
 type class_def = {
     class_name: string;
+    init_instr: instr list;
     attributes: (string * typ) list;
-    attributes_final: (string * typ) list;
+    attributes_final: string list;
     methods: method_def list;
     parent: string option;
   }
