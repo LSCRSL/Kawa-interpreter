@@ -92,11 +92,11 @@ let typecheck_prog p =
         | Opp -> check exp TInt tenv; TInt
         | Not -> check exp TBool tenv; TBool)
     | Binop (op, e1, e2) -> (match op with
-    | Add | Sub | Mul | Div | Rem -> check e1 TInt tenv; check e2 TInt tenv; TInt
-    | Lt  | Le  | Gt | Ge -> check e1 TInt tenv; check e2 TInt tenv; TBool;
-    | Eq  | Neq -> let t1 = type_expr e1 tenv in check e2 t1 tenv; TBool
-    | And | Or -> check e1 TBool tenv; check e2 TBool tenv; TBool; )
-    | Get mem -> type_mem_access mem tenv
+      | Add | Sub | Mul | Div | Rem -> check e1 TInt tenv; check e2 TInt tenv; TInt
+      | Lt  | Le  | Gt | Ge -> check e1 TInt tenv; check e2 TInt tenv; TBool;
+      | Eq  | Neq | Eq_struct | Neq_struct -> let t1 = type_expr e1 tenv in check e2 t1 tenv; TBool
+      | And | Or -> check e1 TBool tenv; check e2 TBool tenv; TBool; )
+      | Get mem -> type_mem_access mem tenv
     (* Objet courant *)
     | This -> Env.find "this" tenv (*comment mettre à jour tenv pour qu'il contienne this*)
     | New class_name -> TClass class_name

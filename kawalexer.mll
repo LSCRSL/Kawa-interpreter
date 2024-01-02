@@ -79,6 +79,8 @@ rule token = parse
   | "="  { SET }
   (*acces a un attribut*)
   | "." { DOT }
+  | "===" {EQ_STRUCT}
+  | "=/=" {NEQ_STRUCT}
 
   | _    { raise (Error ("unknown character : " ^ lexeme lexbuf)) }
   | eof  { EOF }

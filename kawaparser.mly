@@ -18,6 +18,7 @@
 %token TRUE FALSE
 %token PLUS STAR MINUS DIV MODULO (*arithmetique*)
 %token LT LTE GT GTE ISEQUAL NOTEQUAL
+%token EQ_STRUCT NEQ_STRUCT
 %token AND OR
 %token NOT
 
@@ -25,7 +26,7 @@
 %left OR
 %left AND
 %right NOT
-%left LT LTE GT GTE ISEQUAL NOTEQUAL
+%left LT LTE GT GTE ISEQUAL NOTEQUAL EQ_STRUCT NEQ_STRUCT
 %left PLUS MINUS
 %left STAR DIV MODULO
 %left DOT  (*priorité la plus élevée pour accéder à un attribut ?*)
@@ -179,6 +180,8 @@ expression:
 | NOTEQUAL {Neq}
 | AND {And}
 | OR {Or}
+| EQ_STRUCT { Eq_struct }
+| NEQ_STRUCT { Neq_struct }
 ;
 
 %inline unop:

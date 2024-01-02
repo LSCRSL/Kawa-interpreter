@@ -19,7 +19,7 @@ let typ_to_string = function
 type unop  = Opp | Not
 type binop = Add | Sub | Mul | Div | Rem
            | Lt  | Le  | Gt | Ge | Eq  | Neq
-           | And | Or
+           | And | Or | Eq_struct | Neq_struct
 
 (* Expressions *)
 type expr =

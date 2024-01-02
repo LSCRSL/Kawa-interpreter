@@ -1,6 +1,7 @@
 var point p1;
 var point p2;
 var point p3;
+
 class point {
     attribute int x;
     attribute int y;
@@ -22,4 +23,8 @@ main {
     p3 = p1;
     p3.x = 3;
     print(p1.x); // 3
+    print(p1 === p3); // true
+    print(p1 =/= p2); // true
+    p2.x = 3;
+    print(p1 =/= p2); // false 
 }

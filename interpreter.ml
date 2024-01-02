@@ -156,7 +156,7 @@ let exec_prog (p: program): unit =
         | Eq -> let ev1 = eval e1 in let ev2 = eval e2 in let b = (ev1 = ev2) in if b = false then VBool false else 
                   (match ev1, ev2 with
                   | VObj v1, VObj v2 -> VBool (v1.fields == v2.fields) (*comparer physiquement les tables de hachage*)
-                  | _, _ -> VBool true
+                  | _, _ -> VBool true  (*même étiquette, donc égaux*)
                 )
 
         | Neq -> let vb = eval (Binop(Eq, e1, e2)) in (
@@ -164,6 +164,22 @@ let exec_prog (p: program): unit =
               | VBool true -> VBool false
               | VBool false -> VBool true
               | _ -> failwith "error with operator !="
+          ) 
+        | Eq_struct -> let ev1 = eval e1 in 
+                       let ev2 = eval e2 in 
+                       let b = (ev1 = ev2) in 
+                       if b = false then 
+                        VBool false 
+                      else 
+                        (match ev1, ev2 with
+                        | VObj v1, VObj v2 -> VBool (v1.fields = v2.fields) (*comparer physiquement les tables de hachage*)
+                        | _, _ -> VBool true
+                        )
+        | Neq_struct -> let vb = eval (Binop(Eq_struct, e1, e2)) in (
+              match vb with
+              | VBool true -> VBool false
+              | VBool false -> VBool true
+              | _ -> failwith "error with operator =/="
           ) 
         | And -> let v1 = evalb e1 in 
               if v1 = false then VBool false
