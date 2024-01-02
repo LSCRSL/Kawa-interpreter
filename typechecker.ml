@@ -124,7 +124,11 @@ let typecheck_prog p =
     | Var x ->
           (*let () = Env.iter (fun key value -> Printf.printf "%s : " key) tenv in 
           Printf.printf "\n";*)
-          (try  Env.find x tenv with Not_found -> failwith "undeclared variabe")
+          (*try Env.find x tenv with Not_found -> failwith "undelcared variables"*)
+          (try  Env.find x tenv with
+            | t -> (t,false) (*t n'est pas du bon type*)
+            | Not_found -> failwith "undeclared variabe")
+          
     | Field (obj, x) -> 
       let class_name = (match type_expr obj tenv with
       | TClass name -> name
@@ -139,10 +143,15 @@ let typecheck_prog p =
                     | None -> raise Not_found
                     | Some parent_class_name -> look_for_attribute_and_parents parent_class_name)
             | (attr_name, attr_type)::suite -> if attr_name = x then (attr_type, is_final) else find_attribute suite is_final
-        in try find_attribute class_def.attributes false with 
+        (*in try find_attribute class_def.attributes false with 
           | Not_found -> find_attribute class_def.attributes_final true
-          | _ -> failwith "ce cas ne devrait pas être atteignable"
-      in look_for_attribute_and_parents class_name
+          | _ -> failwith "ce cas ne devrait pas être atteignable"*)
+        in try find_attribute class_def.attributes false with 
+        | Not_found -> (try find_attribute class_def.attributes_final true with
+                      | Not_found -> failwith "la variable n'existe pas"
+                      | _ -> failwith "ce cas ne devrait pas être atteignable")
+        | _ -> failwith "ce cas ne devrait pas être atteignable"
+      in look_for_attribute_and_parents class_name (* car type_mem_access est de type : typ on veut qu'il soit de type (typ,bool)*)
 
   and check_instr i ret tenv (check_final:bool) = match i with
     | Print e -> (match type_expr e tenv with

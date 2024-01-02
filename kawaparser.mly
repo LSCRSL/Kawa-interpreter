@@ -86,11 +86,11 @@ class_def:
       | e::l -> failwith "too many constructor"
     in
     let decl_list = fst acc_tuple in 
-    let rec separate_attributes decl_liste attr_list attr_final_list = 
+    let rec separate_attributes decl_liste (attr_list : 'a list) attr_final_list = 
         match decl_liste with 
         | [] -> (attr_list, attr_final_list)
-        | (name, t, is_final)::suite -> if is_final then separate_attributes suite attr_list (name,t)::attr_final_list
-                                        else separate_attributes suite (name,t)::attr_list attr_final_list
+        | (name, t, is_final)::suite -> if is_final then separate_attributes suite attr_list ((name,t)::attr_final_list)
+                                        else separate_attributes suite ((name,t)::attr_list) attr_final_list
     in let separated_list_tuple = separate_attributes decl_list [] [] 
     in
 
