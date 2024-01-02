@@ -83,6 +83,7 @@ type method_def = {
 type class_def = {
     class_name: string;
     attributes: (string * typ) list;
+    attributes_final: (string * typ) list;
     methods: method_def list;
     parent: string option;
   }

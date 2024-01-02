@@ -11,7 +11,7 @@
 %token LPAR RPAR BEGIN END SEMI COMMA
 %token PRINT IF ELSE WHILE RETURN SET
 %token VAR
-%token CLASS METHOD EXTENDS ATTRIBUTE NEW THIS (*classe*)
+%token CLASS METHOD EXTENDS ATTRIBUTE NEW THIS FINAL (*classe*)
 %token TINT TBOOL TVOID
 %token DOT
 %token EOF
@@ -69,13 +69,14 @@ type_decl:
 
 (*rajouter les methodes*)
 class_def:
-| CLASS cls=IDENT BEGIN attr=list(attribute_declaration) mthd=list(method_def) END { 
+| CLASS cls=IDENT BEGIN attr_final = list(attribute_declaration) attr=list(attribute_declaration) mthd=list(method_def) END { 
     let rec aux liste acc_decl acc_instr = 
       match liste with 
       | [] -> (acc_decl, acc_instr)
       | (l1, l2)::suite -> aux suite (l1 @ acc_decl) (acc_instr @ l2)
       in let acc_tuple = aux attr [] [] in
     
+    (*modifier constructeur*)
     let method_list = List.filter (fun method_def -> (method_def.method_name = "constructor")) mthd in
     let new_mthd_list = match method_list with 
       | [] -> let mthd_constr = {method_name="constructor";code=(snd acc_tuple); params=[]; locals=[]; return=TVoid} in 
@@ -84,7 +85,16 @@ class_def:
                 mthd
       | e::l -> failwith "too many constructor"
     in
-    {class_name=cls; attributes=(fst acc_tuple); methods=new_mthd_list; parent=None}
+    let decl_list = fst acc_tuple in 
+    let rec separate_attributes decl_liste attr_list attr_final_list = 
+        match decl_liste with 
+        | [] -> (attr_list, attr_final_list)
+        | (name, t, is_final)::suite -> if is_final then separate_attributes suite attr_list (name,t)::attr_final_list
+                                        else separate_attributes suite (name,t)::attr_list attr_final_list
+    in let separated_list_tuple = separate_attributes decl_list [] [] 
+    in
+
+    {class_name=cls; attributes=(fst separated_list_tuple); attributes_final=(snd separated_list_tuple); methods=new_mthd_list; parent=None}
   }
 | CLASS cls=IDENT EXTENDS parent_name=IDENT BEGIN attr=list(attribute_declaration) mthd=list(method_def) END {
     let rec aux liste acc_decl acc_instr = 
@@ -92,20 +102,29 @@ class_def:
       | [] -> (acc_decl, acc_instr)
       | (l1, l2)::suite -> aux suite (l1 @ acc_decl) (acc_instr @ l2)
       in let acc_tuple = aux attr [] [] in
-    
-    {class_name=cls; attributes=(fst acc_tuple); methods=mthd; parent=Some parent_name}
+
+    let decl_list = fst acc_tuple in 
+    let rec separate_attributes decl_liste attr_list attr_final_list = 
+        match decl_liste with 
+        | [] -> (attr_list, attr_final_list)
+        | (name, t, is_final)::suite -> if is_final then separate_attributes suite attr_list ((name,t)::attr_final_list)
+                                        else separate_attributes suite ((name,t)::attr_list) attr_final_list
+    in let separated_list_tuple = separate_attributes decl_list [] [] 
+    in
+    {class_name=cls; attributes=(fst separated_list_tuple); attributes_final=(snd separated_list_tuple); methods=mthd; parent=Some parent_name}
   }
 ;
 
 attribute_declaration:
-| ATTRIBUTE t=type_decl attrs=separated_list(COMMA,IDENT) SEMI {  let tuples_list = List.map (fun name -> (name,t)) attrs in (tuples_list, []) }
+| ATTRIBUTE FINAL t= type_decl attrs=separated_list(COMMA,IDENT) SEMI {  let tuples_list = List.map (fun name -> (name,t,true)) attrs in (tuples_list, []) }
+| ATTRIBUTE t=type_decl attrs=separated_list(COMMA,IDENT) SEMI {  let tuples_list = List.map (fun name -> (name,t,false)) attrs in (tuples_list, []) }
 | ATTRIBUTE t=type_decl names=separated_list(COMMA,IDENT) SET values=separated_list(COMMA,expression) SEMI { 
     let rec map_ident_val names values tuples_list instr_list = 
         match names, values with 
         | [], [] -> (tuples_list, instr_list)
         | _::_, [] -> failwith "not enough values to unpack"
         | [], _::_ -> failwith "too many values to unpack"
-        | name::s1, value::s2 -> map_ident_val s1 s2 ((name, t)::tuples_list) (Set(Field(This,name), value)::instr_list)
+        | name::s1, value::s2 -> map_ident_val s1 s2 ((name, t, false)::tuples_list) (Set(Field(This,name), value)::instr_list)
     in map_ident_val names values [] []
  }
 ;

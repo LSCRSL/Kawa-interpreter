@@ -26,6 +26,7 @@
       "attribute", ATTRIBUTE;
       "new",       NEW;
       "this",      THIS;
+      "final",     FINAL;
       
       
     ] ;

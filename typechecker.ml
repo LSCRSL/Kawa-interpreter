@@ -68,7 +68,10 @@ let typecheck_prog p =
     (*rajouter les variables locales*)
     let tenv_locals = add_env method_def.locals tenv in 
     (*appeler checkseq sur le code de la fonction*)
-    check_seq method_def.code method_def.return tenv_locals
+    if method_def.method_name == "constructor" then 
+      check_seq method_def.code method_def.return tenv_locals false
+    else 
+      check_seq method_def.code method_def.return tenv_locals true
   
   
   and type_mthcall (class_name : string) (mthd_name : string) (params : expr list) tenv : typ =
@@ -130,28 +133,32 @@ let typecheck_prog p =
       let rec look_for_attribute_and_parents class_name = 
         let class_def = find_cls_def class_name in
         (*verifier qu'il y a un attribut x*)
-        let rec find_attribute attr_list = 
+        let rec find_attribute attr_list is_final = 
             match attr_list with 
             | [] -> (match class_def.parent with 
-                    | None -> failwith "this attribute does not exist"
+                    | None -> raise Not_found
                     | Some parent_class_name -> look_for_attribute_and_parents parent_class_name)
-            | (attr_name, attr_type)::suite -> if attr_name = x then attr_type else find_attribute suite 
-        in find_attribute class_def.attributes
+            | (attr_name, attr_type)::suite -> if attr_name = x then (attr_type, is_final) else find_attribute suite is_final
+        in try find_attribute class_def.attributes false with 
+          | Not_found -> find_attribute class_def.attributes_final true
+          | _ -> failwith "ce cas ne devrait pas être atteignable"
       in look_for_attribute_and_parents class_name
 
-  and check_instr i ret tenv = match i with
+  and check_instr i ret tenv (check_final:bool) = match i with
     | Print e -> (match type_expr e tenv with
                   | TInt | TBool -> ()
                   | _ -> failwith "à compléter")
-    | Set (x, e) -> let t = type_mem_access x tenv in check e t tenv
-    | If (e, s1, s2) -> check e TBool tenv; check_seq s1 ret tenv; check_seq s2 ret tenv
-    | While(e, s) -> check e TBool tenv; check_seq s ret tenv;
+    | Set (x, e) -> if check_final then 
+                          (*pas le droit de modifier un attribut final*)
+                          let t = type_mem_access x tenv in check e t tenv
+    | If (e, s1, s2) -> check e TBool tenv; check_seq s1 ret tenv check_final; check_seq s2 ret tenv check_final
+    | While(e, s) -> check e TBool tenv; check_seq s ret tenv check_final;
     (* Fin d'une fonction *)
     | Return e -> check e ret tenv
     (* Expression utilisée comme instruction *)
     | Expr e -> check e TVoid tenv
-  and check_seq s ret tenv =
-    List.iter (fun i -> check_instr i ret tenv) s
+  and check_seq s ret tenv (check_final : bool) =
+    List.iter (fun i -> check_instr i ret tenv check_final) s
 
   in
 
