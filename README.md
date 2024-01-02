@@ -11,6 +11,7 @@
 - peut on lancer des erreurs avec menhir
 - est-ce qu'il faut lancer une erreur précise si on ne construit pas un objet avec new avant d'accèder à ses attributs
 - cas `let x, x = ...`
+- envoyer mail concernant l'initialisation d'un attribut dans une classe fille 
 
 # Tests
 Rajouter des tests qui sont censés planter pour illustrer les erreurs de syntaxe possible

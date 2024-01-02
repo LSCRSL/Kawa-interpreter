@@ -1,20 +1,21 @@
-var int x = 1;
+var int x_glob = 1;
 var int y, z;
 
-var point a = new point(2);
+var point a = new point; //il faut créer le constructeur
 
 class point {
     attribute int x, y;
-    attribute bool b;
+    attribute bool b = true;
 
     method int test (int px) {
         var int l, m = 1, 2;
 
-        return l+px;
+        return x_glob + px + l + m;
     }
 }
 
 main {
     y = a.test(0);
-    print(y);
+    print(y); //affiche 4
+    print(a.b); // affiche true
 }

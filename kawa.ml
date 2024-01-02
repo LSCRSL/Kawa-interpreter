@@ -66,7 +66,7 @@ and seq = instr list
    Le corps de la méthode est similaire au corps d'une fonction. *)
 type method_def = {
     method_name: string;
-    code: seq;
+    mutable code: seq;
     params: (string * typ) list;
     locals: (string * typ) list;
     return: typ;

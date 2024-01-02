@@ -129,7 +129,8 @@ let exec_prog (p: program): unit =
         class_def,{cls=class_name; fields=attr_env};
       in
       match x with
-        | New class_name -> snd(init_object class_name)
+        | New class_name -> let cls_def,obj = init_object class_name in
+                            let _ = eval_call "constructor" obj [] in obj
         | NewCstr (class_name, param) -> let cls_def,obj = init_object class_name in
                                           (*let mthd_def_filter = List.filter (fun mthd_def -> (mthd_def.method_name = "constructor")) cls_def.methods in
                                           let constructor = get_first_element mthd_def_filter in*)

@@ -69,25 +69,44 @@ type_decl:
 (*rajouter les methodes*)
 class_def:
 | CLASS cls=IDENT BEGIN attr=list(attribute_declaration) mthd=list(method_def) END { 
-    let rec aux liste acc = 
+    let rec aux liste acc_decl acc_instr = 
       match liste with 
-      | [] -> acc 
-      | l::suite -> aux suite (l @ acc)
-      in let attr_list = aux attr [] in
-    {class_name=cls; attributes=attr_list; methods=mthd; parent=None}
+      | [] -> (acc_decl, acc_instr)
+      | (l1, l2)::suite -> aux suite (l1 @ acc_decl) (acc_instr @ l2)
+      in let acc_tuple = aux attr [] [] in
+    
+    let method_list = List.filter (fun method_def -> (method_def.method_name = "constructor")) mthd in
+    let new_mthd_list = match method_list with 
+      | [] -> let mthd_constr = {method_name="constructor";code=(snd acc_tuple); params=[]; locals=[]; return=TVoid} in 
+              mthd_constr::mthd
+      | e::[] -> e.code <- (snd acc_tuple)@ e.code;
+                mthd
+      | e::l -> failwith "too many constructor"
+    in
+    {class_name=cls; attributes=(fst acc_tuple); methods=new_mthd_list; parent=None}
   }
 | CLASS cls=IDENT EXTENDS parent_name=IDENT BEGIN attr=list(attribute_declaration) mthd=list(method_def) END {
-    let rec aux liste acc = 
+    let rec aux liste acc_decl acc_instr = 
       match liste with 
-      | [] -> acc 
-      | l::suite -> aux suite (l @ acc)
-      in let attr_list = aux attr [] in
-    {class_name=cls; attributes=attr_list; methods=mthd; parent=Some parent_name}
+      | [] -> (acc_decl, acc_instr)
+      | (l1, l2)::suite -> aux suite (l1 @ acc_decl) (acc_instr @ l2)
+      in let acc_tuple = aux attr [] [] in
+    
+    {class_name=cls; attributes=(fst acc_tuple); methods=mthd; parent=Some parent_name}
   }
 ;
 
 attribute_declaration:
-| ATTRIBUTE t=type_decl attrs=separated_list(COMMA,IDENT) SEMI { List.map (fun name -> (name,t)) attrs }
+| ATTRIBUTE t=type_decl attrs=separated_list(COMMA,IDENT) SEMI {  let tuples_list = List.map (fun name -> (name,t)) attrs in (tuples_list, []) }
+| ATTRIBUTE t=type_decl names=separated_list(COMMA,IDENT) SET values=separated_list(COMMA,expression) SEMI { 
+    let rec map_ident_val names values tuples_list instr_list = 
+        match names, values with 
+        | [], [] -> (tuples_list, instr_list)
+        | _::_, [] -> failwith "not enough values to unpack"
+        | [], _::_ -> failwith "too many values to unpack"
+        | name::s1, value::s2 -> map_ident_val s1 s2 ((name, t)::tuples_list) (Set(Field(This,name), value)::instr_list)
+    in map_ident_val names values [] []
+ }
 ;
 
 method_def:
