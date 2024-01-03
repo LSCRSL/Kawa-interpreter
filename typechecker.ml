@@ -16,7 +16,7 @@ let add_env l tenv =
 
 let typecheck_prog p =
   let tenv_ = add_env p.globals Env.empty in
-  
+  let class_level = ref "" in
 
   let rec check e typ tenv =
     let rec explore_parents node cls target = 
@@ -38,6 +38,7 @@ let typecheck_prog p =
     (*ajouter les attributs à l'env*)
     (*let tenv_attr = add_env (List.map (fun (x, t) -> ("this." ^ x, t)) (cls_def.attributes @ cls_def.attributes_final)) tenv in*)
     (*boucler sur les methodes, rajouter les attibuts à l'env + appel check_mcall*)
+    class_level := cls_def.class_name;
     List.iter (fun instr -> check_instr instr TVoid tenv false) cls_def.init_instr;
     
     List.iter 
@@ -57,9 +58,15 @@ let typecheck_prog p =
       check_seq method_def.code method_def.return tenv_locals true
   
   
-  and type_mthcall (class_name : string) (mthd_name : string) (params : expr list) tenv : typ =
+  and type_mthcall (obj_class_name : string) (mthd_name : string) (params : expr list) tenv : typ =
     (*recherche de la methode dans parent*)
-    let mthd = find_mthd_def class_name mthd_name p in
+    let mthd = find_mthd_def obj_class_name mthd_name p in
+    (*verifier qu'on a le droit d'appeler la méthode*)
+    let () = match mthd.visib with
+    | Private -> if obj_class_name <> (!class_level) then failwith "the method is private and can't be accessed outside the class"
+    | Protected -> if (is_sub_class (!class_level) obj_class_name p) = false then failwith "the method is protected and is not accessible"
+    | Public -> () 
+    in
     let args = mthd.params in 
     let rec verif_type_params args params = 
       match args,params with
@@ -83,7 +90,7 @@ let typecheck_prog p =
       | Lt  | Le  | Gt | Ge -> check e1 TInt tenv; check e2 TInt tenv; TBool;
       | Eq  | Neq | Eq_struct | Neq_struct -> let t1 = type_expr e1 tenv in check e2 t1 tenv; TBool
       | And | Or -> check e1 TBool tenv; check e2 TBool tenv; TBool; )
-      | Get mem -> type_mem_access mem tenv false
+      | Get mem -> type_mem_access mem tenv false false
     (* Objet courant *)
     | This -> Env.find "this" tenv (*comment mettre à jour tenv pour qu'il contienne this*)
     | New class_name -> let _ = find_cls_def class_name p in TClass class_name
@@ -95,12 +102,13 @@ let typecheck_prog p =
                                       | _ -> failwith "Constructor should have return type void")
                                     in
                                     TClass class_name 
-    | MethCall (e, method_name, params) -> let class_type = type_expr e tenv in
+    | MethCall (e, method_name, params) -> 
+            let class_type = type_expr e tenv in
             (*recup la nom de la classe*)
             let class_name = (match class_type with
             | TClass x -> x;
             | _ -> assert false ) in
-            (*ajouter les attributs à l'environnement*)
+            (*vérifier si on a le droit d'appeler la méthode*)
             type_mthcall class_name method_name params tenv
     | Instance_of(e, t) -> let type_e = type_expr e tenv in 
             (match type_e with
@@ -114,19 +122,14 @@ let typecheck_prog p =
                         let class_t = (match t with
                                         | TClass x -> x 
                                         | _ -> failwith "cannot use transtype operator on primitive types") in
-                        let rec is_sub_class sub_class super_class = 
-                          if sub_class = super_class then true
-                          else let class_def = find_cls_def sub_class p in 
-                                match class_def.parent with
-                                | None -> false 
-                                | Some parent_class_name -> is_sub_class parent_class_name super_class 
-                          in if (is_sub_class class_e class_t) || (is_sub_class class_t class_e) 
+                         
+                          if (is_sub_class class_e class_t p) || (is_sub_class class_t class_e p) 
                                 then t 
                           else 
                                 failwith "target classes are in different branches" 
 
             
-  and type_mem_access (m : mem_access) tenv (check_final : bool) = match m with
+  and type_mem_access (m : mem_access) tenv (check_final : bool) (set_op : bool) = match m with
     | Var x ->
           (try Env.find x tenv with
           Not_found -> failwith "undeclared variabe")
@@ -146,35 +149,77 @@ let typecheck_prog p =
          - type : TVoid if not found
          - bool : true if found in final attributes list 
       *)
-      let search_for_attribute_in_class class_def = 
+      let search_for_attribute_in_class class_def x = 
         (*return type of attribute, and boolean = true if found*)
         let rec search_attr_list list : typ * bool = match list with 
             | [] -> (TVoid, false)
             | (name, t)::suite -> if name = x then (t, true) else search_attr_list suite 
-        in 
-        let rec is_final class_name = 
-          let class_def = find_cls_def class_name p in 
-          if List.exists (fun name -> name = x) class_def.attributes_final then true 
-          else 
-          match class_def.parent with
-          | None -> false 
-          | Some parent_class_name -> is_final parent_class_name
-        in let t, found = search_attr_list class_def.attributes
-        in if found then (true, t, is_final class_name) 
-           else (false, TVoid, false)
+        in search_attr_list class_def.attributes
+    
       
       in 
-      (*search for attribute in parents*)
+
+      let rec check_is_final class_name = 
+        let class_def = find_cls_def class_name p in 
+        if List.exists (fun name -> name = x) class_def.attributes_final then true 
+        else 
+        match class_def.parent with
+        | None -> false 
+        | Some parent_class_name -> check_is_final parent_class_name
+
+        in 
+
+      let rec check_is_protected class_name = 
+        let class_def = find_cls_def class_name p in 
+        if List.exists (fun name -> name = x) class_def.attributes_protected then true 
+        else 
+        match class_def.parent with
+        | None -> false 
+        | Some parent_class_name -> check_is_protected parent_class_name
+
+      in
+
+      let check_private is_private attr_name found_class = 
+          match obj with
+          | This -> (*si l'attribut est privé, il ne doit pas être hérité*)
+                    if (is_private && class_name != found_class) then 
+                          failwith "attribute is private, cannot be used in a subclass" 
+          | _ ->  (*si l'attribut est private alors on n'a pas le droit de l'utiliser si on est à l'extérieur de la classe *)
+                    if is_private && (!class_level <> class_name) then 
+                        let () = Printf.printf "current class : %s - object class : %s\n" (!class_level) class_name in 
+                        failwith "attribute is private, cannot be used outside the class"
+      in
+
+      let check_protected is_protected attr_name = (*j'ai besoin de savoir dans quelle classe je suis*)
+        match obj with
+        | This -> ()  (*this.attr donc je suis à l'intérieur d'une classe et je peux utiliser un attribut hérité*)
+        | _ -> let class_level_name = !class_level     (*a.x : si x est protected alors vérifier que la classe courante est une sous-classe de celle de a*)
+              in if is_protected && (is_sub_class class_level_name class_name p) = false then failwith "can't access protected attribute"
+      in
+
+      let check_final_aux is_final check_final = 
+          if set_op then
+            match obj with
+            | This -> if check_final (*à l'extérieur d'un constructeur*)
+                      && is_final then failwith "Can't modify final attribute outside of constructor"
+            | _ -> if is_final then  (*je modifie un attribut final d'une classe A dans le constructeur d'une autre classe B*)
+                      failwith "Can't modify final attribute outside of constructor"
+          
+      in 
+
       let rec explore_parents_for_attr class_name = 
         (*look in current class*)
-        let class_def = find_cls_def class_name p in
-        let found, t, is_final = search_for_attribute_in_class class_def in 
+        let current_class_def = find_cls_def class_name p in
+        let t, found = search_for_attribute_in_class current_class_def x in 
         if found then 
-                                (*attribute should not be final*)
-            if check_final then if is_final then failwith "Can't modify final attribute outside of constructor"
-                                else t 
-            else t 
-        else match class_def.parent with
+            let is_private = List.exists (fun attr_name -> x = attr_name) current_class_def.attributes_private in 
+            let is_final = check_is_final current_class_def.class_name in
+            let is_protected = check_is_protected current_class_def.class_name in
+            check_final_aux is_final check_final;
+            check_private is_private x current_class_def.class_name;
+            check_protected is_protected x;
+            t
+        else match current_class_def.parent with
         | None -> failwith "attribute undefined"
         | Some parent_class_name -> explore_parents_for_attr parent_class_name
 
@@ -184,7 +229,7 @@ let typecheck_prog p =
     | Print e -> (match type_expr e tenv with
                   | TInt | TBool -> ()
                   | _ -> failwith "à compléter")
-    | Set (x, e) -> let t = type_mem_access x tenv check_final in check e t tenv 
+    | Set (x, e) -> let t = type_mem_access x tenv check_final true in check e t tenv 
     | If (e, s1, s2) -> check e TBool tenv; check_seq s1 ret tenv check_final; check_seq s2 ret tenv check_final
     | While(e, s) -> check e TBool tenv; check_seq s ret tenv check_final;
     (* Fin d'une fonction *)

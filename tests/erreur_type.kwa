@@ -1,7 +1,7 @@
-var point p;
+var Point p;
 var bool x;
 
-class point {
+class Point {
     attribute int x;
     attribute int y;
 
@@ -18,6 +18,6 @@ class point {
 }
 
 main {
-    p = new point(1, 2);
+    p = new Point(1, 2);
     x = p.test(1);
 }

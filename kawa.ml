@@ -4,11 +4,16 @@
 
 (* Types déclarés pour les attributs, pour les variables, et pour les 
    paramètres et résultats des méthodes. *)
+
+
 type typ =
   | TVoid
   | TInt
   | TBool
   | TClass of string
+
+type visibility = Private | Protected | Public
+
 
 let typ_to_string = function
   | TVoid    -> "void"
@@ -69,10 +74,11 @@ and seq = instr list
    Le corps de la méthode est similaire au corps d'une fonction. *)
 type method_def = {
     method_name: string;
-    mutable code: seq;
+    code: seq;
     params: (string * typ) list;
     locals: (string * typ) list;
     return: typ;
+    visib: visibility;
   }
         
 (* Définition de classe 
@@ -88,6 +94,8 @@ type class_def = {
     init_instr: instr list;
     attributes: (string * typ) list;
     attributes_final: string list;
+    attributes_private: string list;
+    attributes_protected: string list;
     methods: method_def list;
     parent: string option;
   }

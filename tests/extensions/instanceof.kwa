@@ -1,30 +1,30 @@
-var cA a;
-var cB b;
-var cD d;
-var cE e;
-var cA x;
-var cA y;
+var CA a;
+var CB b;
+var CD d;
+var CE e;
+var CA x;
+var CA y;
 
-class cA {}
+class CA {}
 
-class cB extends cA {}
+class CB extends CA {}
 
-class cD extends cA {}
+class CD extends CA {}
 
-class cE extends cD {}
+class CE extends CD {}
 
 main {
-    a = new cA;
-    b = new cB;
-    d = new cD;
-    e = new cE;
-    x = new cE;
-    y = new cB;
-    print(a instanceof cA); // true 
-    print(a instanceof cB); // false 
-    print(b instanceof cA); // true 
-    print(d instanceof cA); // true
-    print(e instanceof cB); // false
-    print(e instanceof cE); // true
-    print(y instanceof cA); // true
+    a = new CA;
+    b = new CB;
+    d = new CD;
+    e = new CE;
+    x = new CE;
+    y = new CB;
+    print(a instanceof CA); // true 
+    print(a instanceof CB); // false 
+    print(b instanceof CA); // true 
+    print(d instanceof CA); // true
+    print(e instanceof CB); // false
+    print(e instanceof CE); // true
+    print(y instanceof CA); // true
 }

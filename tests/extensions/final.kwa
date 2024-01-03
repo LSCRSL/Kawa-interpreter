@@ -1,15 +1,15 @@
-var cA a;
-var cB b;
-var cD d;
+var CA a;
+var CB b;
+var CD d;
 
-class cA {
+class CA {
     attribute final int x = 1;
     attribute int y;
     attribute bool b = true;
 
     method void constructor(int y) {
         this.y = y;
-        this.x = 3;
+        //this.x = 3;
     }
 
     method int test() {
@@ -18,13 +18,13 @@ class cA {
     }
 }
 
-class cB extends cA {
-    method void print_cB() {
+class CB extends CA {
+    method void print_CB() {
         print(this.b);
     }
 }
 
-class cD extends cA {
+class CD extends CA {
     attribute int z = -1;
 
     method void constructor(int y) {
@@ -35,13 +35,13 @@ class cD extends cA {
 }
 
 main {
-    a = new cA(2);
+    a = new CA(2);
     print(a.test());  // 1
     print(a.b);
-    b = new cB;
-    b.print_cB();     // true
+    b = new CB;
+    b.print_CB();     // true
     // b.x = 4;       // plante car x est final
-    d = new cD(2);    // 0
+    d = new CD(2);    // 0
     print(d.z);       // -1
     print(a.x);       // 1
 }

@@ -8,11 +8,12 @@
 
 %token <int> INT
 %token <string> IDENT
+%token <string> CLASS_NAME
 %token MAIN
 %token LPAR RPAR BEGIN END SEMI COMMA
 %token PRINT IF ELSE WHILE RETURN SET
 %token VAR
-%token CLASS METHOD EXTENDS ATTRIBUTE NEW THIS FINAL INSTANCE_OF CAST (*classe*)
+%token CLASS METHOD EXTENDS ATTRIBUTE NEW THIS FINAL INSTANCE_OF PRIVATE PROTECTED (*classe*)
 %token TINT TBOOL TVOID
 %token DOT
 %token EOF
@@ -31,6 +32,7 @@
 %left LT LTE GT GTE ISEQUAL NOTEQUAL EQ_STRUCT NEQ_STRUCT
 %left PLUS MINUS
 %left STAR DIV MODULO
+%right RPAR
 %left DOT  (*priorité la plus élevée pour accéder à un attribut ?*)
 
 %start program
@@ -46,11 +48,11 @@ program:
 ;
 
 var_decl:
-| VAR t=type_decl names=separated_list(COMMA,IDENT) SEMI { 
+| VAR t=type_decl names=separated_nonempty_list(COMMA,IDENT) SEMI { 
       let tuples_list = List.map (fun name -> (name,t)) names 
       in (tuples_list, []) 
   }
-| VAR t=type_decl names=separated_list(COMMA,IDENT) SET values=separated_list(COMMA,expression) SEMI { 
+| VAR t=type_decl names=separated_nonempty_list(COMMA,IDENT) SET values=separated_nonempty_list(COMMA,expression) SEMI { 
       map_ident_val_variables t names values [] []
  }
 ;
@@ -59,31 +61,52 @@ type_decl:
 | TINT { TInt }
 | TBOOL { TBool }
 | TVOID { TVoid }
-| x=IDENT { TClass x }
+| x=CLASS_NAME { TClass x }
 ;
 
 (*rajouter les methodes*)
 class_def:
-| CLASS cls=IDENT BEGIN attr=list(attribute_declaration) mthd=list(method_def) END { 
+| CLASS cls=CLASS_NAME BEGIN attr=list(attribute_declaration) mthd=list(method_def) END { 
     let decl_list, set_list = aux attr [] [] in    
-    let attr_typ_list, final_attr_names = get_final_attr decl_list [] [] in
-    {class_name=cls; init_instr=set_list; attributes=attr_typ_list; attributes_final=final_attr_names; methods=mthd; parent=None}
+    let attr_typ_list, final_attr_names, private_attr_names, protected_attr_names = separate_attributes decl_list [] [] [] [] in
+    (*List.iter (fun x -> Printf.printf "%s : " x) private_attr_names;*)
+    {
+      class_name=cls; 
+      init_instr=set_list; 
+      attributes=attr_typ_list; 
+      attributes_final=final_attr_names;
+      attributes_private=private_attr_names; 
+      attributes_protected=protected_attr_names;
+      methods=mthd; 
+      parent=None
+    }
   }
-| CLASS cls=IDENT EXTENDS parent_name=IDENT BEGIN attr=list(attribute_declaration) mthd=list(method_def) END {
+| CLASS cls=CLASS_NAME EXTENDS parent_name=CLASS_NAME BEGIN attr=list(attribute_declaration) mthd=list(method_def) END {
     let decl_list, set_list = aux attr [] [] in    
-    let attr_typ_list, final_attr_names = get_final_attr decl_list [] [] in
-    {class_name=cls; init_instr=set_list; attributes=attr_typ_list; attributes_final=final_attr_names; methods=mthd; parent=Some parent_name}
+    let attr_typ_list, final_attr_names, private_attr_names, protected_attr_names = separate_attributes decl_list [] [] [] [] in
+    {
+      class_name=cls; 
+      init_instr=set_list; 
+      attributes=attr_typ_list; 
+      attributes_final=final_attr_names; 
+      attributes_private=private_attr_names; 
+      attributes_protected=protected_attr_names;
+      methods=mthd; 
+      parent=Some parent_name
+    }
   }
 ;
 
 attribute_declaration:
-| ATTRIBUTE FINAL t= type_decl attrs=separated_list(COMMA,IDENT) SEMI {  let tuples_list = List.map (fun name -> (name,t,true)) attrs in (tuples_list, []) }
-| ATTRIBUTE t=type_decl attrs=separated_list(COMMA,IDENT) SEMI {  let tuples_list = List.map (fun name -> (name,t,false)) attrs in (tuples_list, []) }
-| ATTRIBUTE t=type_decl names=separated_list(COMMA,IDENT) SET values=separated_list(COMMA,expression) SEMI { 
-    map_ident_val_attributes t false names values [] []
+| ATTRIBUTE FINAL t= type_decl attrs=separated_nonempty_list(COMMA,IDENT) SEMI {  let tuples_list = List.map (fun name -> (name, t, true, Public)) attrs in (tuples_list, []) }
+| ATTRIBUTE PRIVATE t= type_decl attrs=separated_nonempty_list(COMMA,IDENT) SEMI {  let tuples_list = List.map (fun name -> (name, t, false, Private)) attrs in (tuples_list, []) }
+| ATTRIBUTE PROTECTED t= type_decl attrs=separated_nonempty_list(COMMA,IDENT) SEMI {  let tuples_list = List.map (fun name -> (name, t, false, Protected)) attrs in (tuples_list, []) }
+| ATTRIBUTE t=type_decl attrs=separated_nonempty_list(COMMA,IDENT) SEMI {  let tuples_list = List.map (fun name -> (name, t, false, Public)) attrs in (tuples_list, []) }
+| ATTRIBUTE t=type_decl names=separated_nonempty_list(COMMA,IDENT) SET values=separated_nonempty_list(COMMA,expression) SEMI { 
+    map_ident_val_attributes t false Public names values [] []
  }
-| ATTRIBUTE FINAL t=type_decl names=separated_list(COMMA,IDENT) SET values=separated_list(COMMA,expression) SEMI { 
-    map_ident_val_attributes t true names values [] []
+| ATTRIBUTE FINAL t=type_decl names=separated_nonempty_list(COMMA,IDENT) SET values=separated_nonempty_list(COMMA,expression) SEMI { 
+    map_ident_val_attributes t true Public names values [] []
  }
  
 ;
@@ -91,7 +114,38 @@ attribute_declaration:
 method_def:
 | METHOD t=type_decl name=IDENT LPAR param=separated_list(COMMA,arg) RPAR BEGIN var=list(var_decl) instr=list(instruction) END {
       let acc_tuple = aux var [] [] in
-      {method_name=name; code=(snd acc_tuple)@instr; params=param; locals=fst acc_tuple; return=t}
+      { 
+        method_name=name; 
+        code=(snd acc_tuple)@instr; 
+        params=param; 
+        locals=fst acc_tuple; 
+        return=t;
+        visib=Public;
+      }
+  }
+
+| METHOD PRIVATE t=type_decl name=IDENT LPAR param=separated_list(COMMA,arg) RPAR BEGIN var=list(var_decl) instr=list(instruction) END {
+      let acc_tuple = aux var [] [] in
+      { 
+        method_name=name; 
+        code=(snd acc_tuple)@instr; 
+        params=param; 
+        locals=fst acc_tuple; 
+        return=t;
+        visib=Private;
+      }
+  }
+
+| METHOD PROTECTED t=type_decl name=IDENT LPAR param=separated_list(COMMA,arg) RPAR BEGIN var=list(var_decl) instr=list(instruction) END {
+      let acc_tuple = aux var [] [] in
+      { 
+        method_name=name; 
+        code=(snd acc_tuple)@instr; 
+        params=param; 
+        locals=fst acc_tuple; 
+        return=t;
+        visib=Protected;
+      }
   }
 ;
 
@@ -129,13 +183,14 @@ expression:
 | LPAR e=expression RPAR {e}
 | v=memory_access {Get(v)}
 | e=expression INSTANCE_OF t=type_decl {Instance_of(e,t)}
-| CAST LPAR e=expression COMMA t=type_decl RPAR  {Transtyp(e, t)}
+(*| CAST LPAR e=expression COMMA t=type_decl RPAR  {Transtyp(e, t)}*)
+| LPAR t=type_decl RPAR e=expression {Transtyp(e, t)}
 (*operations*)
 | e1=expression op=binop e2=expression { Binop(op, e1, e2) }
 | op=unop e=expression { Unop(op, e) }
 (*classes*)
-| NEW x=IDENT {New x}
-| NEW x=IDENT LPAR params=separated_list(COMMA, expression) RPAR {NewCstr(x,params) } 
+| NEW x=CLASS_NAME {New x}
+| NEW x=CLASS_NAME LPAR params=separated_list(COMMA, expression) RPAR {NewCstr(x,params) } 
 (*method*)
 | e=expression DOT name=IDENT LPAR param=separated_list(COMMA,expression) RPAR {MethCall(e,name,param)}
 (*this pour param implicite dans la classe*)

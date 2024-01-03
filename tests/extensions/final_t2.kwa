@@ -1,0 +1,26 @@
+var CA a;
+var CB b;
+
+class CA {
+    attribute final int x;
+
+    method void constructor() {
+        this.x = 1;
+    }
+
+    method void print_x() {
+        print(this.x);
+    }
+}
+
+class CB {
+    method void constructor(CA a) {
+        //a.x = 2;
+        print(a.x); // 1
+    }
+}
+
+main {
+    a = new CA();
+    b = new CB(a);
+}

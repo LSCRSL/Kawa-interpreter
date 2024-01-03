@@ -1,45 +1,45 @@
-var cA a;
-var cB b;
-var cD d;
-var cE e;
-var cA x;
-var cA y;
+var CA a;
+var CB b;
+var CD d;
+var CE e;
+var CA x;
+var CA y;
 
-class cA {
+class CA {
     method void test() {
         print(1);
     }
 }
 
-class cB extends cA {
+class CB extends CA {
     method void test() {
         print(2);
     }
 }
 
-class cD extends cA {
+class CD extends CA {
     method void test() {
         print(3);
     }
 }
 
-class cE extends cD {
+class CE extends CD {
     method void test() {
         print(4);
     }
 
-    method void in_cE() {}
+    method void in_CE() {}
 }
 
 main {
-    a = new cE;
-    b = new cB;
-    d = new cD;
-    e = new cE;
-    x = cast(a, cD);
-    y = cast(e, cA);
+    a = new CE;
+    b = new CB;
+    d = new CD;
+    e = new CE;
+    x = (CD) a;
+    y = (CA) e;
     x.test(); // 4
     y.test(); // 4
 
-    //y.cE();   // plante
+    //y.CE();   // plante
 }

@@ -1,18 +1,18 @@
-var segment s;
-var point p;
-var paire m;
+var Segment s;
+var Point p;
+var Paire m;
 
-class point {
+class Point {
   attribute int x;
   attribute int y;
 }
 
-class segment {
-  attribute point a;
-  attribute point b;
+class Segment {
+  attribute Point a;
+  attribute Point b;
 }
 
-class paire {
+class Paire {
   attribute int x;
   attribute int y;
 
@@ -27,18 +27,17 @@ class paire {
 }
 
 main {
-  p = new point;
+  p = new Point;
   p.x = 1;
   p.y = 2;
-  s = new segment;
+  s = new Segment;
   s.a = p;
-  s.b = new point;
+  s.b = new Point;
   s.b.x = 3;
   p = s.b;
   p.y = 4;
-  print(s.a.x + s.a.y + s.b.x + s.b.y);
-  // affiche 10
-  m = new paire(1, 2);
+  print(s.a.x + s.a.y + s.b.x + s.b.y); // 10
+  m = new Paire(1, 2);
   print(m.x - m.y); // -1
   print(---3);
 }

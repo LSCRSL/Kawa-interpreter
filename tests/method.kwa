@@ -1,6 +1,6 @@
-var point p;
+var Point p;
 
-class point {
+class Point {
   attribute int x;
   attribute int y;
 
@@ -15,7 +15,7 @@ class point {
 }
 
 main {
-  p = new point(2, 1);
+  p = new Point(2, 1);
   p.x = 3 + p.x;
   print(48 + p.somme());
   // affiche 54

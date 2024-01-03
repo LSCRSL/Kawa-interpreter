@@ -28,10 +28,10 @@
       "this",      THIS;
       "final",     FINAL;
       "instanceof", INSTANCE_OF;
-      "cast",    CAST;
-      
-      
+      "private", PRIVATE;
+      "protected", PROTECTED;
     ] ;
+
   fun s ->
     try  Hashtbl.find h s
     with Not_found -> IDENT(s)
@@ -45,6 +45,7 @@ let number = ['-']? digit+
 let number = digit+
 let alpha = ['a'-'z' 'A'-'Z']
 let ident = ['a'-'z' '_'] (alpha | '_' | digit)*
+let class_name = ['A'-'Z'] (alpha | '_' | digit)*
   
 rule token = parse
   | ['\n']            { new_line lexbuf; token lexbuf }
@@ -55,6 +56,7 @@ rule token = parse
 
   | number as n  { INT(int_of_string n) }
   | ident as id  { keyword_or_ident id }
+  | class_name as cn { CLASS_NAME(cn) }
 
   | ";"  { SEMI }
   | ","  { COMMA }

@@ -1,9 +1,9 @@
 var int x_glob = 1;
 var int y, z;
 
-var point a = new point; //il faut créer le constructeur
+var Point a = new Point; //il faut créer le constructeur
 
-class point {
+class Point {
     attribute int x, y;
     attribute bool b = true;
 

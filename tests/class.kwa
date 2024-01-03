@@ -1,14 +1,14 @@
-var point a;
-var point b;
+var Point a;
+var Point b;
 
-class point {
+class Point {
   attribute int x, y;
   attribute bool b;
 }
 
 main {
-  a = new point;
-  b = new point;
+  a = new Point;
+  b = new Point;
   a.x = 1;
   a.y = 2;
   b.x = 3;

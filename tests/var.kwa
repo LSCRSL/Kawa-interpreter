@@ -6,5 +6,5 @@ main {
   y = 6;
   x = x+2;    // x = 3
   y = y*(x+4); // y = 42
-  print(y);
+  print(y);   // 42
 }

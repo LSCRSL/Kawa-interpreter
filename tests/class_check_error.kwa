@@ -1,7 +1,7 @@
-var point p;
-var origine o;
+var Point p;
+var Origine o;
 var int x;
-class point {
+class Point {
     attribute int x;
     attribute int y;
 
@@ -13,20 +13,20 @@ class point {
         return l+1;
     }
 
-    method void test_heritage(point p) {
+    method void test_heritage(Point p) {
         print(true);
     }
 }
 
-class origine extends point {
-    method void test_heritage_2(origine p) {
+class Origine extends Point {
+    method void test_heritage_2(Origine p) {
         print(true);
     }
 }
 
 main {
-    p = new point;
-    o = new origine; 
+    p = new Point;
+    o = new Origine; 
     o.test_heritage_2(p);
     o.x = 2;
     p.y = 7;

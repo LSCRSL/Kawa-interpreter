@@ -1,0 +1,49 @@
+var Point p;
+var Point opp;
+
+class Point {
+    attribute private int x, y;
+    attribute bool b;
+
+    method void constructor(int x, int y) {
+        this.x = x;
+        this.y = y;
+        this.b = true;
+    }
+
+    method private void incr_x() {
+        this.x = this.x + 1;
+        print(this.x); // 2
+    }
+
+    method Point opp() {
+        var Point p;
+
+        p = new Point(-this.x, -this.y);
+
+        print(p.x+this.x); // 0
+
+        p.incr_x();  // 0
+
+        return p;
+    }
+}
+
+class Origine extends Point {
+    method void test() {
+        //print(this.x); // plante
+        var Point p;
+
+        p = new Point(1, 2);
+        //print(p.x);   // plante
+        //p.incr_x();     // plante
+    }
+}
+
+main {
+    p = new Point(1, 2);
+    print(p.b);     // true
+    opp = p.opp();  // 0
+    //opp.incr_x();   // plante
+    //print(p.x);   // plante
+}

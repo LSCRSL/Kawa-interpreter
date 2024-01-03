@@ -1,10 +1,10 @@
 var int x, z;
 var bool b;
 
-var point a;
-var point b;
+var Point a;
+var Point b;
 
-class point {
+class Point {
     attribute int x, y;
     attribute bool b;
 
@@ -21,7 +21,7 @@ main {
     x = 1;
     z = 6;
     b = true;
-    a = new point;
+    a = new Point;
     a.y = 9;
     print(x);
     print(b);

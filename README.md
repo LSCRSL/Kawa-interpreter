@@ -16,6 +16,7 @@
 - si une méthode n'a pas le type de retour void, faut-il forcer un return ?
 - ne pas pouvoir modifier un attribut final dans une classe fille
 - initialiser un attribut final une seule fois
+- on force le programmeur à utiliser this pour accéder à un attribut
 
 # Tests
 Rajouter des tests qui sont censés planter pour illustrer les erreurs de syntaxe possible
