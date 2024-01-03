@@ -1,0 +1,43 @@
+var A a;
+var B b;
+
+class A {
+    attribute protected int x;
+    attribute int incr = 10;
+    method void constructor(int x) {
+        this.x = x;
+        this.incr = 10;
+    } 
+
+    method void methodA() {
+        this.x = this.x + this.incr;
+        print(this.x);
+    }
+
+    method private int incr() {
+        return this.incr;
+    }
+}
+
+class B extends A {
+    method void constructor(int x) {
+        this.x = x;
+    } 
+
+    method void methodB() {
+        var int i;
+
+        print(this.x);
+        super.methodA();
+        // i = super.incr(); // plante
+        this.x = this.x - 5;
+        print(this.x);
+    }
+}
+
+main {
+    a = new A(10);
+    a.methodA();   // 20
+    b = new B(30); 
+    b.methodB(); // 30 puis 40 puis 35
+}

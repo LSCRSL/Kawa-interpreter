@@ -45,10 +45,24 @@ let exec_prog (p: program): unit =
       | _ -> assert false
 
     (*rajouter this à l'environnement local*)
-    and eval_call (f: string) (this: obj) (args : expr list) =
+    and eval_call (f: string) (this: obj) (args : expr list) (super : bool) =
         (*let objet = (evalo this) in*)
         let class_name = this.cls in 
-        let mthd = find_mthd_def class_name f p in
+        let mthd = if super then 
+          begin
+            let class_def = find_cls_def class_name p in 
+            (match class_def.parent with
+            | Some parent_name -> let parent_class_def = find_cls_def parent_name p in 
+                                  let methods = List.filter (fun method_def -> method_def.method_name = f) parent_class_def.methods in 
+                                  (match methods with
+                                  | [] -> failwith "cas non atteignable"
+                                  | e::[] -> e 
+                                  | _ -> failwith "multiple methods have the same name")
+            | None -> failwith "ce cas n'est pas atteignable")
+            end
+        else 
+            find_mthd_def class_name f p in
+             
         (*environnement local pour exécuter la fonction*)
         let local_env = Hashtbl.create 16 in
         (*ajouter l'objet courant à l'environnement*)
@@ -129,7 +143,7 @@ let exec_prog (p: program): unit =
                             in obj 
         | NewCstr (class_name, param) -> let cls_def,obj = init_object class_name in
                                          let () =  init_attributes_current_and_parents class_name obj in
-                                         let _ = eval_call "constructor" obj param 
+                                         let _ = eval_call "constructor" obj param false
                                          in obj                         
         | _ -> assert false 
 
@@ -192,8 +206,9 @@ let exec_prog (p: program): unit =
 
       | Get mem -> evalvar mem
       | New _ | NewCstr _  -> VObj (evalnew e)
-      | MethCall (e,name,param) -> let objet = (evalo e) in
-                                  eval_call name objet param  (*e : objet, param: parametre de la fonction*)
+      | MethCall (e, name, param) -> let objet = (evalo e) in
+                                  eval_call name objet param false  (*e : objet, param: parametre de la fonction*)
+      | Super(method_name, params) -> eval_call method_name (evalo This) params true
       | This -> Hashtbl.find lenv "this"
       | Instance_of(e, t) -> let objet = (evalo e) in 
                             let target_class = (match t with

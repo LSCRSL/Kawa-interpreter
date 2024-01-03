@@ -42,6 +42,7 @@ type expr =
   | NewCstr  of string * expr list
   (* Appel de méthode *)
   | MethCall of expr * string * expr list
+  | Super of string * expr list
   (*test de type dynamique*)
   | Instance_of of expr * typ
   | Transtyp of expr * typ

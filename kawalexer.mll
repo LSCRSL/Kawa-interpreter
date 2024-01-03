@@ -30,6 +30,7 @@
       "instanceof", INSTANCE_OF;
       "private", PRIVATE;
       "protected", PROTECTED;
+      "super", SUPER;
     ] ;
 
   fun s ->

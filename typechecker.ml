@@ -58,7 +58,10 @@ let typecheck_prog p =
       check_seq method_def.code method_def.return tenv_locals true
   
   
-  and type_mthcall (obj_class_name : string) (mthd_name : string) (params : expr list) tenv : typ =
+  and type_mthcall (obj_class_name : string) 
+                   (mthd_name : string) 
+                   (params : expr list) 
+                   tenv : typ =
     (*recherche de la methode dans parent*)
     let mthd = find_mthd_def obj_class_name mthd_name p in
     (*verifier qu'on a le droit d'appeler la méthode*)
@@ -110,6 +113,21 @@ let typecheck_prog p =
             | _ -> assert false ) in
             (*vérifier si on a le droit d'appeler la méthode*)
             type_mthcall class_name method_name params tenv
+    | Super (method_name, params) -> 
+            (*check if direct parent of current class has this method*)
+            let current_class_name = !class_level in 
+            let current_class_def = find_cls_def current_class_name p in
+            (match current_class_def.parent with
+            | None -> failwith "current method does not have a parent : cannot use super"
+            | Some parent_class_name -> let parent_class_def = find_cls_def parent_class_name p in 
+                                        
+                                        let methods = List.filter (fun method_def -> method_def.method_name = method_name) parent_class_def.methods in 
+                                        let method_exists = (match methods with
+                                        | [] -> false
+                                        | e::[] -> true 
+                                        | _ -> failwith "multiple methods have the same name")
+                                            in if method_exists then type_mthcall parent_class_name method_name params tenv
+                                            else failwith "method not found in direct parent")
     | Instance_of(e, t) -> let type_e = type_expr e tenv in 
             (match type_e with
             | TInt | TBool | TVoid -> failwith "cannot use instanceof operator on primitive types"

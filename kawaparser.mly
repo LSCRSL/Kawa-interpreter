@@ -13,7 +13,7 @@
 %token LPAR RPAR BEGIN END SEMI COMMA
 %token PRINT IF ELSE WHILE RETURN SET
 %token VAR
-%token CLASS METHOD EXTENDS ATTRIBUTE NEW THIS FINAL INSTANCE_OF PRIVATE PROTECTED (*classe*)
+%token CLASS METHOD EXTENDS ATTRIBUTE NEW THIS FINAL INSTANCE_OF PRIVATE PROTECTED SUPER (*classe*)
 %token TINT TBOOL TVOID
 %token DOT
 %token EOF
@@ -193,6 +193,7 @@ expression:
 | NEW x=CLASS_NAME LPAR params=separated_list(COMMA, expression) RPAR {NewCstr(x,params) } 
 (*method*)
 | e=expression DOT name=IDENT LPAR param=separated_list(COMMA,expression) RPAR {MethCall(e,name,param)}
+| SUPER DOT name=IDENT LPAR param=separated_list(COMMA,expression) RPAR { Super(name, param) }
 (*this pour param implicite dans la classe*)
 | THIS { This }
 ;
