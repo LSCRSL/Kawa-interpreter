@@ -38,6 +38,8 @@ let typecheck_prog p =
     (*ajouter les attributs à l'env*)
     (*let tenv_attr = add_env (List.map (fun (x, t) -> ("this." ^ x, t)) (cls_def.attributes @ cls_def.attributes_final)) tenv in*)
     (*boucler sur les methodes, rajouter les attibuts à l'env + appel check_mcall*)
+    List.iter (fun instr -> check_instr instr TVoid tenv false) cls_def.init_instr;
+    
     List.iter 
           (fun method_def -> check_mdef method_def (add_env method_def.params tenv)) 
           cls_def.methods
@@ -74,7 +76,8 @@ let typecheck_prog p =
     | Unop (op, exp) ->
         (match op with
         | Opp -> check exp TInt tenv; TInt
-        | Not -> check exp TBool tenv; TBool)
+        | Not -> check exp TBool tenv; TBool
+        )
     | Binop (op, e1, e2) -> (match op with
       | Add | Sub | Mul | Div | Rem -> check e1 TInt tenv; check e2 TInt tenv; TInt
       | Lt  | Le  | Gt | Ge -> check e1 TInt tenv; check e2 TInt tenv; TBool;
@@ -99,6 +102,28 @@ let typecheck_prog p =
             | _ -> assert false ) in
             (*ajouter les attributs à l'environnement*)
             type_mthcall class_name method_name params tenv
+    | Instance_of(e, t) -> let type_e = type_expr e tenv in 
+            (match type_e with
+            | TInt | TBool | TVoid -> failwith "cannot use instanceof operator on primitive types"
+            | TClass _ -> (match t with
+                            | TInt | TBool | TVoid  -> failwith "cannot use instanceof operator on primitive types"
+                            | TClass _ -> TBool))
+    | Transtyp(e, t) -> let class_e = (match type_expr e tenv with
+                                        | TClass x -> x
+                                        | _ -> failwith "cannot use transtype operator on primitive types") in 
+                        let class_t = (match t with
+                                        | TClass x -> x 
+                                        | _ -> failwith "cannot use transtype operator on primitive types") in
+                        let rec is_sub_class sub_class super_class = 
+                          if sub_class = super_class then true
+                          else let class_def = find_cls_def sub_class p in 
+                                match class_def.parent with
+                                | None -> false 
+                                | Some parent_class_name -> is_sub_class parent_class_name super_class 
+                          in if (is_sub_class class_e class_t) || (is_sub_class class_t class_e) 
+                                then t 
+                          else 
+                                failwith "target classes are in different branches" 
 
             
   and type_mem_access (m : mem_access) tenv (check_final : bool) = match m with
@@ -140,7 +165,7 @@ let typecheck_prog p =
       
       in 
       (*search for attribute in parents*)
-      let rec explore_parents class_name = 
+      let rec explore_parents_for_attr class_name = 
         (*look in current class*)
         let class_def = find_cls_def class_name p in
         let found, t, is_final = search_for_attribute_in_class class_def in 
@@ -151,9 +176,9 @@ let typecheck_prog p =
             else t 
         else match class_def.parent with
         | None -> failwith "attribute undefined"
-        | Some parent_class_name -> explore_parents parent_class_name
+        | Some parent_class_name -> explore_parents_for_attr parent_class_name
 
-      in explore_parents class_name
+      in explore_parents_for_attr class_name
 
   and check_instr i ret tenv (check_final:bool) = match i with
     | Print e -> (match type_expr e tenv with

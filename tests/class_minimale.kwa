@@ -17,5 +17,5 @@ class origine extends point {}
 main {
     p = new point;
     x = p.test(3);
-    print(x);
+    print(x); // 4
 }

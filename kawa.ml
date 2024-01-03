@@ -16,7 +16,7 @@ let typ_to_string = function
   | TBool    -> "bool"
   | TClass c -> c
 
-type unop  = Opp | Not
+type unop  = Opp | Not 
 type binop = Add | Sub | Mul | Div | Rem
            | Lt  | Le  | Gt | Ge | Eq  | Neq
            | And | Or | Eq_struct | Neq_struct
@@ -37,6 +37,9 @@ type expr =
   | NewCstr  of string * expr list
   (* Appel de méthode *)
   | MethCall of expr * string * expr list
+  (*test de type dynamique*)
+  | Instance_of of expr * typ
+  | Transtyp of expr * typ
 
 (* Accès mémoire : variable ou attribut d'un objet *)
 and mem_access =

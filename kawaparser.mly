@@ -12,7 +12,7 @@
 %token LPAR RPAR BEGIN END SEMI COMMA
 %token PRINT IF ELSE WHILE RETURN SET
 %token VAR
-%token CLASS METHOD EXTENDS ATTRIBUTE NEW THIS FINAL (*classe*)
+%token CLASS METHOD EXTENDS ATTRIBUTE NEW THIS FINAL INSTANCE_OF CAST (*classe*)
 %token TINT TBOOL TVOID
 %token DOT
 %token EOF
@@ -27,6 +27,7 @@
 %left OR
 %left AND
 %right NOT
+%left INSTANCE_OF
 %left LT LTE GT GTE ISEQUAL NOTEQUAL EQ_STRUCT NEQ_STRUCT
 %left PLUS MINUS
 %left STAR DIV MODULO
@@ -127,6 +128,8 @@ expression:
 | FALSE { Bool false }
 | LPAR e=expression RPAR {e}
 | v=memory_access {Get(v)}
+| e=expression INSTANCE_OF t=type_decl {Instance_of(e,t)}
+| CAST LPAR e=expression COMMA t=type_decl RPAR  {Transtyp(e, t)}
 (*operations*)
 | e1=expression op=binop e2=expression { Binop(op, e1, e2) }
 | op=unop e=expression { Unop(op, e) }
@@ -148,11 +151,11 @@ expression:
 | LT { Lt }
 | LTE { Le }
 | GT { Gt }
-| GTE {Ge} 
-| ISEQUAL {Eq}
-| NOTEQUAL {Neq}
-| AND {And}
-| OR {Or}
+| GTE { Ge } 
+| ISEQUAL { Eq }
+| NOTEQUAL { Neq }
+| AND { And }
+| OR { Or }
 | EQ_STRUCT { Eq_struct }
 | NEQ_STRUCT { Neq_struct }
 ;
@@ -160,5 +163,4 @@ expression:
 %inline unop:
 | NOT { Not }
 | MINUS { Opp }
-
 ;

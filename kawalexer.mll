@@ -27,6 +27,8 @@
       "new",       NEW;
       "this",      THIS;
       "final",     FINAL;
+      "instanceof", INSTANCE_OF;
+      "cast",    CAST;
       
       
     ] ;

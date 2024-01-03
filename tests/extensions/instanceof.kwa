@@ -1,0 +1,30 @@
+var cA a;
+var cB b;
+var cD d;
+var cE e;
+var cA x;
+var cA y;
+
+class cA {}
+
+class cB extends cA {}
+
+class cD extends cA {}
+
+class cE extends cD {}
+
+main {
+    a = new cA;
+    b = new cB;
+    d = new cD;
+    e = new cE;
+    x = new cE;
+    y = new cB;
+    print(a instanceof cA); // true 
+    print(a instanceof cB); // false 
+    print(b instanceof cA); // true 
+    print(d instanceof cA); // true
+    print(e instanceof cB); // false
+    print(e instanceof cE); // true
+    print(y instanceof cA); // true
+}

@@ -195,7 +195,27 @@ let exec_prog (p: program): unit =
       | MethCall (e,name,param) -> let objet = (evalo e) in
                                   eval_call name objet param  (*e : objet, param: parametre de la fonction*)
       | This -> Hashtbl.find lenv "this"
-    in
+      | Instance_of(e, t) -> let objet = (evalo e) in 
+                            let target_class = (match t with
+                                | TClass x -> x 
+                                | _ -> failwith "ce cas n'est pas atteignable") 
+                            in
+                            let class_name = objet.cls in 
+                            let rec is_instance_of class_name = 
+                              if class_name = target_class then true
+                              else let class_def = find_cls_def class_name p in  
+                              match class_def.parent with
+                              | None -> false 
+                              | Some parent_class_name -> is_instance_of parent_class_name
+                            in VBool (is_instance_of class_name)
+      | Transtyp(e, t) -> (*verifier que le type réel de e est un sous-type de t*)
+                    match (eval (Instance_of(e, t))) with
+                    | VBool b -> if b then (eval e) 
+                                else failwith "transtypage impossible"
+                    | _ -> failwith "ce cas ne devrait pas être atteignable"
+                               
+    
+  in
   
     let rec exec (i: instr): unit = match i with
       | Print e -> 
