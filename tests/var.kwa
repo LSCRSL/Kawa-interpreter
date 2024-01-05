@@ -1,5 +1,5 @@
 var int x;
-var int °;
+var int y;
 
 main {
   x = 1;
