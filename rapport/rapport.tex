@@ -26,9 +26,87 @@
 \tableofcontents
 \newpage
 \section{Résumé}
-L'objectif de ce projet a été de contruire un interprète pour un petit langage objet inspiré de Java.
+L'objectif de ce projet a été de contruire un interprète pour un petit langage objet inspiré de Java. \textcolor{red}{(à compléter)}
 \section{Analyse syntaxique}
+Nous avons réalisé l'analyse syntaxique du programme et produit l'arbre de syntaxe abstraite en complétant les fichiers \texttt{kawalexer.mly} et \texttt{kawaparser.mly}. Le fichier \texttt{kawalexer.mly} représente la syntaxe concrète du langage Kawa. On y introduit des symboles terminaux :  mots-clés, identifiants, constantes; et des symboles non terminaux. Nous avons ajouté des règles de priorité : l'accès à un attribut obtient la priorité la plus élévée, vient ensuite  les opérations arithmétiques et les opérations logiques.
 \section{Vérification des types}
+La vérification des types se fait dans le fichier \texttt{typechecker.ml} \textcolor{red}{(à compléter)}
 \section{Interprétation}
+L'interprétation se fait dans le fichier \texttt{interpreter.ml}. \textcolor{red}{(à compléter, je pense qu'il faut attendre qu'on ait terminé car les fonctions changent tout le temps)}
+\subsection{Valeurs et opérations de base}
+Fonctions utiles : \\
+\texttt{eval} : évalue une expression\\
+\texttt{exec} : exécute une instruction\\
+\texttt{exec\_seq} : exécute une séquence d'instructions.
+\subsection{Classes et objets}
+Fonction utile : \smallskip\\
+\texttt{evalnew} : permet de créer un nouvel objet.
+On ajoute les attributs de la classe courante et des classes mères s'il y a, dans notre environnement local. Si la création de notre nouvel objet fait appel à un constructeur, alors nous faisons appel à une méthode donc utilisons la fonction \texttt{eval\_call}
+\subsection{Variables et attributs}
+Fonction utile : \\
+\texttt{evalvar} : évalue si la variable ou l'attribut ont été déclarés.\\
+Pour le cas d'une \underline{variable}, on regarde si celle ci est dans l'environnement local ou global. Si ce n'est pas le cas, alors notre variable n'est pas définie.\\
+Pour le cas des \underline{attributs d'une classe}, il nous suffit de chercher le nom de notre attribut dans la Hashtbl représentant les attributs de la classe à l'aide la fonction \texttt{Hashtbl.find}.
+\subsection{Méthodes}
+Fonction utile : \\
+\texttt{eval\_call} qui évalue un appel de méthode. Cette fonction prend en argument : le nom de la méthode, l'objet qui appelle cette méthode, les arguments de cette méthode.\\
+Nous avons donc dans un premier temps cherché la définition de cette méthode. Il a fallu ensuite créer un environnement local pour exécuter la fonction et lui ajouter notre objet passé en argument. Il a ensuite fallu associer les arguments aux différents paramètres de cette fonction et ajouter le tout à notre environnement local. Nous ajoutons par la suite toutes les variables locales à notre environnement local.
+\\parler du return !! $\rightarrow$ on a créé un pointeur
+\section{Helper.ml}
+Nous avons créé un nouveau fichier comprenant des fonctions régulièrement appelées dans notre code : 
+\textcolor{green}{Je ne sais pas si on dit lorsque les fonctions sont utilisées ?}
+\smallskip\\
+- \texttt{aux} : fonction prenant en paramètre une liste de tuples comprenant eux-même des listes et deux accumulateurs de liste. Elle renvoie alors un tuple composé de deux listes. Cette fonction est utilisée pour effectuer des déclarations en série avec valeurs initiales.
+\medskip\\
+- \texttt{map\_ident\_val\_attributes} : Elle vérifie, lors de la déclaration avec valeur initiale, que le nombre de valeur donnée correspond au nombre de déclarations. Elle renvoie un tuple. Le premier élément un quadruplet donnant les particularités de l'attribut (nom,type,est-t-il final ?,visibilité). Le second élément constitue une liste d'instructions. Cette fonction est utilisée lors de la déclaration d'attributs avec valeur initiale. 
+\medskip\\
+- \texttt{map\_ident\_val\_variables} : Effectue la même chose que la fonction \texttt{map\_ident\_val\_attributes}, mais pour les variables. Cependant, le premier élément du tuple renvoyé est un tuple de la forme : (nom,type). Cette fonction est utilisée lors de la déclaration de variables avec valeur initiale. \\
+- \texttt{find\_cls\_def} : fonction prenant en paramètre le nom d'une classe et le programme. Cette fonction vérifie que la classe existe et que deux classes n'ont pas le même nom. Si ces deux conditions sont vérifiées, alors la définition de la classe est renvoyée, sinon on renvoie une erreur. 
+\medskip\\
+- \texttt{find\_mthd\_def} : cette fonction prend en paramètre le nom d'une classe $c$, le nom d'une méthode $m$ et le programme. La fonction va alors renvoyer la définition de la méthode $m$ et qui est accessible depuis la classe $c$. On vérifie bien que la classe et la méthode existent, et on recherche aussi la méthode dans les classes parentes si elle n'existe pas dans la classe courante.
+\medskip\\
+- \texttt{separate\_attributes} : cette fonction prend en paramètre une liste de quadruplet correspondant aux informations de chaque attributs. Elle renvoie alors 4 listes : \\
+(i)\hspace{0.5cm}\texttt{attr\_type\_list} : de la forme (nom,type);\\
+(ii)\hspace{0.3cm} \texttt{attr\_final\_names} : comporte le nom des attributs \texttt{final}\\
+(iii)\hspace{0.2cm} \texttt{attr\_private\_names} : comporte le nom des attributs \texttt{private}\\
+(iv)\hspace{0.2cm} \texttt{attr\_protected\_names} : comporte le nom des attributs \texttt{protected}
+\medskip\\
+- \texttt{is\_sub\_class} : fonction prenant en paramètre le nom de deux classes et renvoie vrai si la première classe est une sous-classe de la deuxième.
 \section{Extensions}
+\subsection{Champs immuables}
+Pour donner la possibilité de déclarer un attribut \texttt{final} nous avons d'abord ajouté le mot clé FINAL dans le lexer. Il a fallu l'ajouter en temps que token dans le parser. Pour différencier les attributs dont la valeur peut être modifié et ceux dont la valeur ne peut être modifié, il a fallu modifier la syntaxe abstraite. Nous avons décidé d'ajouter un nouveau champ \texttt{attributes\_final} dans le type \texttt{class\_def}.
+\subsection{Déclaration en série}
+Pour réussir à déclarer simultanément plusieurs variables de la forme : \texttt{var int x,y,z} nous avons modifié uniquement le fichier \texttt{kawaparser.mly} en précisant que le champ \texttt{names} n'est plus un identifiant mais un liste d'identifiants. 
+\subsection{Déclaration avec valeur initiale}
+Pour que l'initialisation des attributs des classes mères se fasse, nous avons créé un nouveau champ \texttt{init\_instr} dans le type \texttt{class\_def}. Celui ci contient une liste d'instructions, en réalité ces instructions sont uniquement des affectations. Ainsi, grâce à ce champ, nous pouvons stocker les affectations et ensuite les utiliser pour les effectuer lorsque nous ajoutons les attributs aux environnements locaux. Ils seront alors initialisés. Ceux des classes-mères également.\\
+\subsection{Égalité structurelle}
+Pour cette extension, il a fallu dans un premier temps rajouter les opérateurs \texttt{===} et \texttt{=/=} dans le fichier \texttt{kawalexer.mly}. Il nous a donc fallu ajouter ce token dans \texttt{kawaparser.mly} et modifier la grammaire de \texttt{binop} en y ajoutant les opérateurs nécessaires et ajouter l'associativité à gauche. \\
+Pour la vérification des types, l'idée est la même que pour la cas d'égalité et d'inégalité.
+Pour compléter le fichier \texttt{interpreter.ml}, l'idée est aussi la même que le cas d'égalité et d'inégalité, seulement, nous remplaçons l'égalité physique des champs par l'égalité structurelle des champs.
+\subsection{Super}
+Rajouter les mots-clés. rajouter une expression de la forme super.f($\ldots$) dans la grammaire. L'idée est simple, il faut chercher dans la classe-mère (si elle existe) une fonction nommée f. Ainsi, on appelle cette fonction sur l'objet de la classe-fille. Ajout d'un paramètre à la fonction \texttt{eval\_call} afin de savoir si l'on cherche la méthode dans la/les classes-mères ou dans la classe "d'origine" (très mal dit).\\
+\subsection{Transtypage}
+On suppose que le nom des classes commence par une majuscule et le nom des variables et attributs commence par une minuscule. En effet, nous avions avant d'implémenter cette règle, un conflit du type reduce/reduce pour une expression de la forme $(ident)$. On pouvait soit, réduire ident comme un type soit le réduire comme une variable. \textcolor{red}{(à compléter)}
+\subsection{Visibilité}
+Ajout d'un nouveau champ \texttt{visib} dans \texttt{method\_def} pour la visibilité. Un enrichissement de la grammaire a été nécessaire et un nouveau type somme a été créé : \texttt{type visibility = Private | Protected | Public}.\\
+Suivant la valeur du champ \texttt{visib}, l'attribut ou méthode est alors accessible :
+\smallskip \\
+- depuis toutes les classes (public);\\
+- depuis la classe courante ainsi que ses sous-classes (protected);\\
+- depuis la classe courante uniquement (private).
+\subsection{Test de type}
+\textcolor{red}{(à compléter)}
+\texttt{instanceof}
+\section{Idées et notes}
+$\rightarrow$ Tableaux en cours (à faire):\\
+- TAB t name[] = new t[n]; (création du tableau de type t et de n éléments\\
+à voir car il semblerait que la création ait été implémentée de la sorte : [e1,e2,e3].\\
+- .add(type t) qui ajoute un élément à la fin du tableau;\\
+- .remove() qui retire le dernier élément du tableau;\\
+- accès : t[i] où i est l'indice $\rightarrow$ vérifier que t est un tableau et i est un entier compris entre 0 et la taille du tableau (exclu).\\
+- écriture : t[i] = n; \\
+- il faut bien vérifier que les expressions soient du même type, notamment lors de l'écriture ou ajout d'un élément.\\
+- peut-etre faut il créer un nouveau type pour les tableaux ? car on ne peut pas avoir un tableau de TVoid...
 \end{document}
+
+
