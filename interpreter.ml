@@ -5,6 +5,7 @@ type value =
   | VInt  of int
   | VBool of bool
   | VObj  of obj
+  | VArr of value list
   | Null
 
 and obj = {
@@ -15,10 +16,11 @@ and obj = {
 exception Error of string
 exception Return of value
 
-let print_value v = match v with
+let rec print_value v = match v with
 | VInt n -> Printf.printf "%d\n" n
 | VBool b -> Printf.printf "%b\n" b
 | VObj _ -> Printf.printf "class\n"
+| VArr l -> List.iter (fun v -> print_value v) l
 | Null -> Printf.printf "null\n"
 
 let print_expr_option e_opt = match e_opt with
@@ -97,6 +99,8 @@ let exec_prog (p: program): unit =
       | Field(e, attribute) -> 
               let obj_ = evalo e in 
               Hashtbl.find obj_.fields attribute
+
+      | ArrElem(t, index) -> failwith "not implemented"
               
 
     and evalnew(x : expr) = 
@@ -224,23 +228,29 @@ let exec_prog (p: program): unit =
                               | Some parent_class_name -> is_instance_of parent_class_name
                             in VBool (is_instance_of class_name)
       | Transtyp(e, t) -> (*verifier que le type réel de e est un sous-type de t*)
-                    match (eval (Instance_of(e, t))) with
+                    (match (eval (Instance_of(e, t))) with
                     | VBool b -> if b then (eval e) 
                                 else failwith "transtypage impossible"
-                    | _ -> failwith "ce cas ne devrait pas être atteignable"
+                    | _ -> failwith "ce cas ne devrait pas être atteignable")
+      | Array (elements) -> VArr (List.map (fun elem -> eval elem) elements)
                                
     
   in
   
     let rec exec (i: instr): unit = match i with
       | Print e -> 
-          let v = eval e in (
+          let v = eval e in 
+            let rec print_proc v = 
             match v with 
-            | VInt n -> Printf.printf "%d\n" n
-            | VBool b -> Printf.printf "%b\n" b
-            | VObj _ -> Printf.printf "objet\n"
-            | Null -> Printf.printf "null\n"
-          )
+            | VInt n -> Printf.printf "%d" n
+            | VBool b -> Printf.printf "%b" b
+            | VObj _ -> Printf.printf "objet"
+            | Null -> Printf.printf "null"
+            | VArr (values) -> 
+                let () = Printf.printf "[ " in 
+                let () = List.iter (fun v -> let () = print_proc v in Printf.printf "; ") values in
+                Printf.printf " ]"
+         in print_proc v; Printf.printf "\n";
       | If(e, s1, s2) -> let v = evalb e in if v = true then exec_seq s1 else exec_seq s2
       | While(e, s) -> let v = evalb e in 
           if v = true then 
@@ -260,6 +270,7 @@ let exec_prog (p: program): unit =
             let obj_ = evalo exp_obj in 
 
             Hashtbl.replace obj_.fields attribute (eval e);
+          | ArrElem (t, index) -> failwith "not implemented"
         )
       | Expr(e) -> let _ = eval e in () (*faire un match : si c'est une méthode appeler eval sinon renvoyer une erreur*)
       | Return(e) -> return_exp := eval e

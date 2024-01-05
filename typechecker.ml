@@ -29,9 +29,9 @@ let typecheck_prog p =
 
     let typ_e = type_expr e tenv in
     match typ_e with
-    | TInt | TBool | TVoid -> if typ_e <> typ then type_error typ_e typ
+    | TInt | TBool | TVoid | TArr _ -> if typ_e <> typ then type_error typ_e typ
     | TClass class_name -> (match typ with
-        | TBool | TInt | TVoid -> type_error typ_e typ
+        | TBool | TInt | TVoid | TArr _ -> type_error typ_e typ
         | TClass class_target -> explore_parents class_name class_name class_target)
 
   and check_class cls_def tenv = 
@@ -131,9 +131,9 @@ let typecheck_prog p =
     | Instance_of(e, t) -> let type_e = type_expr e tenv in 
             (match type_e with
             | TInt | TBool | TVoid -> failwith "cannot use instanceof operator on primitive types"
-            | TClass _ -> (match t with
-                            | TInt | TBool | TVoid  -> failwith "cannot use instanceof operator on primitive types"
-                            | TClass _ -> TBool))
+            | TClass _ | TArr _ -> (match t with
+                            | TInt | TBool | TVoid -> failwith "cannot use instanceof operator on primitive types"
+                            | TClass _ | TArr _ -> TBool))
     | Transtyp(e, t) -> let class_e = (match type_expr e tenv with
                                         | TClass x -> x
                                         | _ -> failwith "cannot use transtype operator on primitive types") in 
@@ -145,7 +145,7 @@ let typecheck_prog p =
                                 then t 
                           else 
                                 failwith "target classes are in different branches" 
-
+    | Array(t) -> failwith "not implemented"
             
   and type_mem_access (m : mem_access) tenv (check_final : bool) (set_op : bool) = match m with
     | Var x ->
@@ -158,7 +158,6 @@ let typecheck_prog p =
                         | TClass name -> name
                         | _ -> failwith "not a class"
                       )
-      
       in 
       
       (*check if attribute is defined in a class*)
@@ -242,6 +241,8 @@ let typecheck_prog p =
         | Some parent_class_name -> explore_parents_for_attr parent_class_name
 
       in explore_parents_for_attr class_name
+    
+    | ArrElem(t, index) -> failwith "not implemented"
 
   and check_instr i ret tenv (check_final:bool) = match i with
     | Print e -> (match type_expr e tenv with

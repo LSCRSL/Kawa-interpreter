@@ -65,6 +65,8 @@ rule token = parse
   | ")"  { RPAR }
   | "{"  { BEGIN }
   | "}"  { END }
+  | "["  { RBRACKET }
+  | "]"  { LBRACKET }
   (*arithmetique*)
   | "+"  { PLUS }
   | "*"  { STAR }

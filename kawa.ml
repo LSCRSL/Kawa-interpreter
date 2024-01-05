@@ -11,15 +11,17 @@ type typ =
   | TInt
   | TBool
   | TClass of string
+  | TArr of typ
 
 type visibility = Private | Protected | Public
 
 
-let typ_to_string = function
+let rec typ_to_string = function
   | TVoid    -> "void"
   | TInt     -> "int"
   | TBool    -> "bool"
   | TClass c -> c
+  | TArr (t) -> "array of " ^ typ_to_string t
 
 type unop  = Opp | Not 
 type binop = Add | Sub | Mul | Div | Rem
@@ -46,11 +48,14 @@ type expr =
   (*test de type dynamique*)
   | Instance_of of expr * typ
   | Transtyp of expr * typ
+  (*table*)
+  | Array of expr list
 
 (* Accès mémoire : variable ou attribut d'un objet *)
 and mem_access =
   | Var   of string
   | Field of expr (* objet *) * string (* nom d'un attribut *)
+  | ArrElem of expr * expr
 
 (* Instructions *)
 type instr =

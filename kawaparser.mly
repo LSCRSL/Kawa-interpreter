@@ -10,7 +10,7 @@
 %token <string> IDENT
 %token <string> CLASS_NAME
 %token MAIN
-%token LPAR RPAR BEGIN END SEMI COMMA
+%token LPAR RPAR BEGIN END SEMI COMMA RBRACKET LBRACKET
 %token PRINT IF ELSE WHILE RETURN SET
 %token VAR
 %token CLASS METHOD EXTENDS ATTRIBUTE NEW THIS FINAL INSTANCE_OF PRIVATE PROTECTED SUPER (*classe*)
@@ -33,6 +33,7 @@
 %left PLUS MINUS
 %left STAR DIV MODULO
 %right RPAR
+%left RBRACKET
 %left DOT  (*priorité la plus élevée pour accéder à un attribut ?*)
 
 %start program
@@ -174,6 +175,7 @@ instruction:
 memory_access:
 | x=IDENT {Var x}
 | e=expression DOT attr=IDENT { Field(e, attr) }
+| e1=expression RBRACKET e2=expression LBRACKET { ArrElem(e1, e2) }
 ;
 
 expression:
@@ -196,6 +198,7 @@ expression:
 | SUPER DOT name=IDENT LPAR param=separated_list(COMMA,expression) RPAR { Super(name, param) }
 (*this pour param implicite dans la classe*)
 | THIS { This }
+| RBRACKET elems=separated_list(COMMA, expression) LBRACKET {Array (elems)}
 ;
 
 %inline binop:
