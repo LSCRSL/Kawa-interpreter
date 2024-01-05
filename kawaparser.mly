@@ -56,7 +56,7 @@ var_decl:
 | VAR t=type_decl names=separated_nonempty_list(COMMA,IDENT) SET values=separated_nonempty_list(COMMA,expression) SEMI { 
       map_ident_val_variables t names values [] []
  }
-;
+ ;
 
 type_decl:
 | TINT { TInt }
