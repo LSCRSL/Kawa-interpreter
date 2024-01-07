@@ -1,0 +1,20 @@
+var int[] t1;
+var int[] t2;
+var int[] empty;
+var bool[] empty_bool;
+
+main {
+    t1 = [0, 1];
+    t2 = [0, 1];
+    empty = [];
+    empty_bool = [];
+
+    print(t1 == t2);
+    print(t2 === t2);
+    print(empty === []);
+    // print(empty == empty_bool);  plante
+
+    print(t1[0]);
+    t1[0] = 10;
+    print(t1[0]);
+}

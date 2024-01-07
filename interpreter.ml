@@ -5,7 +5,7 @@ type value =
   | VInt  of int
   | VBool of bool
   | VObj  of obj
-  | VArr of value list
+  | VArr of value array
   | Null
 
 and obj = {
@@ -16,12 +16,16 @@ and obj = {
 exception Error of string
 exception Return of value
 
-let rec print_value v = match v with
-| VInt n -> Printf.printf "%d\n" n
-| VBool b -> Printf.printf "%b\n" b
-| VObj _ -> Printf.printf "class\n"
-| VArr l -> List.iter (fun v -> print_value v) l
-| Null -> Printf.printf "null\n"
+let error s = raise (Error s)
+
+let print_value v = 
+  let rec aux v = match v with
+| VInt n -> Printf.printf "%d" n
+| VBool b -> Printf.printf "%b" b
+| VObj _ -> Printf.printf "class"
+| VArr l -> Printf.printf "[ "; Array.iter (fun v -> aux v; Printf.printf "; ") l; Printf.printf " ]"
+| Null -> Printf.printf "null"
+  in aux v; Printf.printf "\n" 
 
 let print_expr_option e_opt = match e_opt with
 | None -> Printf.printf "None" 
@@ -45,6 +49,9 @@ let exec_prog (p: program): unit =
     and evalo e = match eval e with
       | VObj o -> o
       | _ -> assert false
+    and evalarr e = match eval e with
+    | VArr a  -> a 
+    | _ -> assert false
 
     (*rajouter this à l'environnement local*)
     and eval_call (f: string) (this: obj) (args : expr list) (super : bool) =
@@ -57,10 +64,10 @@ let exec_prog (p: program): unit =
             | Some parent_name -> let parent_class_def = find_cls_def parent_name p in 
                                   let methods = List.filter (fun method_def -> method_def.method_name = f) parent_class_def.methods in 
                                   (match methods with
-                                  | [] -> failwith "cas non atteignable"
+                                  | [] -> failwith "eval_call : cas non atteignable"
                                   | e::[] -> e 
-                                  | _ -> failwith "multiple methods have the same name")
-            | None -> failwith "ce cas n'est pas atteignable")
+                                  | _ -> error (Printf.sprintf "There are more than one definition for the following method : %s" f))
+            | None -> failwith "eval_call : cas non atteignable")
             end
         else 
             find_mthd_def class_name f p in
@@ -74,7 +81,7 @@ let exec_prog (p: program): unit =
           | e1::l1, (name, _)::l2 ->  Hashtbl.replace local_env name (eval e1);
                                         param_to_env l1 l2;
           | [], [] -> ()
-          | _,_ -> failwith "the number of parameters is incorrect"
+          | _,_ -> failwith "eval_call : cas non atteignable - the number of parameters is incorrect - voir typechecker"
       in 
       let () = param_to_env args mthd.params in
       (*ajouter les variables locales*)
@@ -94,13 +101,17 @@ let exec_prog (p: program): unit =
                   if Hashtbl.mem env x then 
                     Hashtbl.find env x
                   else
-                    failwith "undefined variable"
+                    error (Printf.sprintf "Variable %s is undefined" x)
                     
       | Field(e, attribute) -> 
               let obj_ = evalo e in 
               Hashtbl.find obj_.fields attribute
 
-      | ArrElem(t, index) -> failwith "not implemented"
+      | ArrElem(t, index) -> let arr = evalarr t in
+                             let ind = evali index in 
+                             let length = Array.length arr in 
+                             if length <= ind then error (Printf.sprintf "List index out of range")
+                             else Array.get arr ind
               
 
     and evalnew(x : expr) = 
@@ -131,7 +142,7 @@ let exec_prog (p: program): unit =
         | Set(Field(This, x), e)::suite -> 
               let () = Hashtbl.replace obj.fields x (eval e) 
               in exec_init suite obj
-        | _ -> failwith "ce cas ne devrait pas être atteignable"
+        | _ -> failwith "eval_new : cas non atteignable - que des sets dans init_instr_list"
 
       in let rec init_attributes_current_and_parents class_name obj = 
           let cls_def = find_cls_def class_name p in  
@@ -170,15 +181,13 @@ let exec_prog (p: program): unit =
         | Eq -> let ev1 = eval e1 in let ev2 = eval e2 in let b = (ev1 = ev2) in if b = false then VBool false else 
                   (match ev1, ev2 with
                   | VObj v1, VObj v2 -> VBool (v1.fields == v2.fields) (*comparer physiquement les tables de hachage*)
+                  | VArr a1, VArr a2 -> VBool (a1 == a2)
                   | _, _ -> VBool true  (*même étiquette, donc égaux*)
                 )
 
-        | Neq -> let vb = eval (Binop(Eq, e1, e2)) in (
-              match vb with
-              | VBool true -> VBool false
-              | VBool false -> VBool true
-              | _ -> failwith "error with operator !="
-          ) 
+        | Neq -> let vb = evalb (Binop(Eq, e1, e2)) in 
+        if vb = true then VBool false else VBool true
+          
         | Eq_struct -> let ev1 = eval e1 in 
                        let ev2 = eval e2 in 
                        let b = (ev1 = ev2) in 
@@ -186,15 +195,12 @@ let exec_prog (p: program): unit =
                         VBool false 
                       else 
                         (match ev1, ev2 with
-                        | VObj v1, VObj v2 -> VBool (v1.fields = v2.fields) (*comparer physiquement les tables de hachage*)
-                        | _, _ -> VBool true
+                        | VObj v1, VObj v2 -> VBool (v1.fields = v2.fields) (*comparer structurellement les tables de hachage*)
+                        | VArr a1, VArr a2 -> VBool (a1 = a2)
+                        | _, _ -> VBool true  (*même étiquette, donc égaux*)
                         )
-        | Neq_struct -> let vb = eval (Binop(Eq_struct, e1, e2)) in (
-              match vb with
-              | VBool true -> VBool false
-              | VBool false -> VBool true
-              | _ -> failwith "error with operator =/="
-          ) 
+        | Neq_struct -> let vb = evalb (Binop(Eq_struct, e1, e2)) in 
+                        if vb = true then VBool false else VBool true
         | And -> let v1 = evalb e1 in 
               if v1 = false then VBool false
               else VBool (evalb e2)
@@ -228,11 +234,16 @@ let exec_prog (p: program): unit =
                               | Some parent_class_name -> is_instance_of parent_class_name
                             in VBool (is_instance_of class_name)
       | Transtyp(e, t) -> (*verifier que le type réel de e est un sous-type de t*)
-                    (match (eval (Instance_of(e, t))) with
-                    | VBool b -> if b then (eval e) 
-                                else failwith "transtypage impossible"
-                    | _ -> failwith "ce cas ne devrait pas être atteignable")
-      | Array (elements) -> VArr (List.map (fun elem -> eval elem) elements)
+                    let vb = evalb (Instance_of(e, t)) in 
+                    let objet = evalo e in 
+                    let class_name = objet.cls in 
+                    let target_class = (match t with
+                                | TClass x -> x 
+                                | _ -> failwith "ce cas n'est pas atteignable") 
+                            in
+                    if vb then (eval e) else error (Printf.sprintf "Cannot cast from type %s to type %s" class_name target_class)
+                
+      | Array (elements) -> VArr (Array.map (fun elem -> eval elem) elements)
                                
     
   in
@@ -248,7 +259,7 @@ let exec_prog (p: program): unit =
             | Null -> Printf.printf "null"
             | VArr (values) -> 
                 let () = Printf.printf "[ " in 
-                let () = List.iter (fun v -> let () = print_proc v in Printf.printf "; ") values in
+                let () = Array.iter (fun v -> let () = print_proc v in Printf.printf "; ") values in
                 Printf.printf " ]"
          in print_proc v; Printf.printf "\n";
       | If(e, s1, s2) -> let v = evalb e in if v = true then exec_seq s1 else exec_seq s2
@@ -265,12 +276,15 @@ let exec_prog (p: program): unit =
                       if Hashtbl.mem env x then 
                         Hashtbl.replace env x (eval e)
                       else
-                        failwith "undefined variable"
+                        error (Printf.sprintf "Variable %s is undefined" x)
           | Field (exp_obj, attribute) -> 
             let obj_ = evalo exp_obj in 
 
             Hashtbl.replace obj_.fields attribute (eval e);
-          | ArrElem (t, index) -> failwith "not implemented"
+          | ArrElem (t, index) -> let arr = evalarr t in 
+                                  let ind = evali index in  
+                                  if Array.length arr <= ind then error (Printf.sprintf "List index out of range")
+                                  else arr.(ind) <- (eval e)
         )
       | Expr(e) -> let _ = eval e in () (*faire un match : si c'est une méthode appeler eval sinon renvoyer une erreur*)
       | Return(e) -> return_exp := eval e

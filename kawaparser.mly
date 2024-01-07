@@ -33,8 +33,8 @@
 %left PLUS MINUS
 %left STAR DIV MODULO
 %right RPAR
-%left RBRACKET
-%left DOT  (*priorité la plus élevée pour accéder à un attribut ?*)
+%left LBRACKET (* LBRACKET ???*)
+%left DOT  (*priorité la plus élevée pour accéder à un attribut*)
 
 %start program
 %type <Kawa.program> program
@@ -63,6 +63,7 @@ type_decl:
 | TBOOL { TBool }
 | TVOID { TVoid }
 | x=CLASS_NAME { TClass x }
+| t=type_decl LBRACKET RBRACKET { TArr (t) }
 ;
 
 (*rajouter les methodes*)
@@ -175,7 +176,7 @@ instruction:
 memory_access:
 | x=IDENT {Var x}
 | e=expression DOT attr=IDENT { Field(e, attr) }
-| e1=expression RBRACKET e2=expression LBRACKET { ArrElem(e1, e2) }
+| e1=expression LBRACKET e2=expression RBRACKET { ArrElem(e1, e2) }
 ;
 
 expression:
@@ -198,7 +199,7 @@ expression:
 | SUPER DOT name=IDENT LPAR param=separated_list(COMMA,expression) RPAR { Super(name, param) }
 (*this pour param implicite dans la classe*)
 | THIS { This }
-| RBRACKET elems=separated_list(COMMA, expression) LBRACKET {Array (elems)}
+| LBRACKET elems=separated_list(COMMA, expression) RBRACKET {Array (Array.of_list elems)}
 ;
 
 %inline binop:

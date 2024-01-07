@@ -41,5 +41,5 @@ main {
     x.test(); // 4
     y.test(); // 4
 
-    //y.CE();   // plante
+    //y.in_CE();   // plante
 }

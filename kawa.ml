@@ -12,6 +12,7 @@ type typ =
   | TBool
   | TClass of string
   | TArr of typ
+  | EmptyArr
 
 type visibility = Private | Protected | Public
 
@@ -22,6 +23,7 @@ let rec typ_to_string = function
   | TBool    -> "bool"
   | TClass c -> c
   | TArr (t) -> "array of " ^ typ_to_string t
+  | EmptyArr -> "empty array"
 
 type unop  = Opp | Not 
 type binop = Add | Sub | Mul | Div | Rem
@@ -49,7 +51,7 @@ type expr =
   | Instance_of of expr * typ
   | Transtyp of expr * typ
   (*table*)
-  | Array of expr list
+  | Array of expr array
 
 (* Accès mémoire : variable ou attribut d'un objet *)
 and mem_access =

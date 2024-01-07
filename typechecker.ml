@@ -7,14 +7,26 @@ let type_error ty_actual ty_expected =
   error (Printf.sprintf "expected %s, got %s"
            (typ_to_string ty_expected) (typ_to_string ty_actual))
 
+let type_undefined_error t = 
+  error (Printf.sprintf "Type %s is undefined" (typ_to_string t))
+
 module Env = Map.Make(String)
 type tenv = typ Env.t
 
-let add_env l tenv =
-  List.fold_left (fun env (x, t) -> Env.add x t env) tenv l
-
 
 let typecheck_prog p =
+
+  let rec type_exists t = 
+    match t with
+    | TInt | TBool | TVoid | EmptyArr -> true 
+    | TClass x -> List.exists (fun class_def -> class_def.class_name = x) p.classes 
+    | TArr (type_elem) -> type_exists type_elem 
+
+  in 
+  let add_env l tenv =
+    List.fold_left (fun env (x, t) -> if type_exists t then Env.add x t env else type_undefined_error t) tenv l
+  in 
+
   let tenv_ = add_env p.globals Env.empty in
   let class_level = ref "" in
 
@@ -31,8 +43,11 @@ let typecheck_prog p =
     match typ_e with
     | TInt | TBool | TVoid | TArr _ -> if typ_e <> typ then type_error typ_e typ
     | TClass class_name -> (match typ with
-        | TBool | TInt | TVoid | TArr _ -> type_error typ_e typ
+        | TBool | TInt | TVoid | TArr _ | EmptyArr -> type_error typ_e typ
         | TClass class_target -> explore_parents class_name class_name class_target)
+    | EmptyArr -> match typ with
+        | EmptyArr | TArr _ -> ()
+        | _ -> type_error typ_e typ
 
   and check_class cls_def tenv = 
     (*ajouter les attributs à l'env*)
@@ -46,8 +61,18 @@ let typecheck_prog p =
           cls_def.methods
 
   and check_mdef method_def tenv = 
+    let is_return instr = match instr with
+    | Return _ -> true 
+    | _ -> false 
+    in 
     (*TODO : s'assurer qu'il y a bien un return sinon lever une exception*)
-
+    let () = match method_def.return with
+    | TVoid -> ()
+    | _ -> if method_def.method_name = "constructor" then  error "Constructor should have return type void"
+           else if List.exists (fun instr -> is_return instr) method_def.code then ()
+                else error (Printf.sprintf "Missing return statement")
+  
+    in
 
     (*rajouter les variables locales*)
     let tenv_locals = add_env method_def.locals tenv in 
@@ -66,8 +91,8 @@ let typecheck_prog p =
     let mthd = find_mthd_def obj_class_name mthd_name p in
     (*verifier qu'on a le droit d'appeler la méthode*)
     let () = match mthd.visib with
-    | Private -> if obj_class_name <> (!class_level) then failwith "the method is private and can't be accessed outside the class"
-    | Protected -> if (is_sub_class (!class_level) obj_class_name p) = false then failwith "the method is protected and is not accessible"
+    | Private -> if obj_class_name <> (!class_level) then  error (Printf.sprintf "The method %s is private and can't be accessed outside the class" mthd_name)
+    | Protected -> if (is_sub_class (!class_level) obj_class_name p) = false then error (Printf.sprintf "The method %s is protected and is not accessible" mthd_name)
     | Public -> () 
     in
     let args = mthd.params in 
@@ -75,7 +100,8 @@ let typecheck_prog p =
       match args,params with
       |(name, t)::l1, e::l2 -> check e t tenv; verif_type_params l1 l2
       | [], [] -> ()
-      | [], _::_ | _::_, [] -> failwith "number of parameters is incorrect"
+      | [], _::_  -> error "Too many arguments in method call"
+      | _::_, [] -> error "Missing arguments in method call"
     in 
     let () = verif_type_params args params in
     mthd.return
@@ -102,7 +128,7 @@ let typecheck_prog p =
                                     (*verifier que le type de retour du constructeur est void*)
                                     let () = (match t with
                                       | TVoid -> ()
-                                      | _ -> failwith "Constructor should have return type void")
+                                      | _ -> error "Constructor should have return type void")
                                     in
                                     TClass class_name 
     | MethCall (e, method_name, params) -> 
@@ -118,7 +144,7 @@ let typecheck_prog p =
             let current_class_name = !class_level in 
             let current_class_def = find_cls_def current_class_name p in
             (match current_class_def.parent with
-            | None -> failwith "current method does not have a parent : cannot use super"
+            | None -> error (Printf.sprintf "Class %s does not have a parent : cannot use super" current_class_name)
             | Some parent_class_name -> let parent_class_def = find_cls_def parent_class_name p in 
                                         
                                         let methods = List.filter (fun method_def -> method_def.method_name = method_name) parent_class_def.methods in 
@@ -127,36 +153,43 @@ let typecheck_prog p =
                                         | e::[] -> true 
                                         | _ -> failwith "multiple methods have the same name")
                                             in if method_exists then type_mthcall parent_class_name method_name params tenv
-                                            else failwith "method not found in direct parent")
+                                            else error (Printf.sprintf "Method %s not found in direct parent of class %s" method_name current_class_name))
     | Instance_of(e, t) -> let type_e = type_expr e tenv in 
             (match type_e with
-            | TInt | TBool | TVoid -> failwith "cannot use instanceof operator on primitive types"
+            | TInt | TBool | TVoid -> error "cannot use instanceof operator on primitive types"
             | TClass _ | TArr _ -> (match t with
-                            | TInt | TBool | TVoid -> failwith "cannot use instanceof operator on primitive types"
-                            | TClass _ | TArr _ -> TBool))
+                            | TInt | TBool | TVoid -> error "cannot use instanceof operator on primitive types"
+                            | TClass _ | TArr _ -> TBool
+                            | EmptyArr -> failwith "Instance_of : ce cas ne devrait pas être atteignable")
+            | EmptyArr -> failwith "Instance_of : ce cas ne devrait pas être atteignable")
     | Transtyp(e, t) -> let class_e = (match type_expr e tenv with
                                         | TClass x -> x
-                                        | _ -> failwith "cannot use transtype operator on primitive types") in 
+                                        | _ -> error "cannot use transtype operator on primitive types") in 
                         let class_t = (match t with
                                         | TClass x -> x 
-                                        | _ -> failwith "cannot use transtype operator on primitive types") in
+                                        | _ -> error "cannot use transtype operator on primitive types") in
                          
                           if (is_sub_class class_e class_t p) || (is_sub_class class_t class_e p) 
                                 then t 
                           else 
-                                failwith "target classes are in different branches" 
-    | Array(t) -> failwith "not implemented"
+                                error (Printf.sprintf "target classes %s and %s are in different branches" class_e class_t) 
+    | Array(t) -> if Array.length t = 0 then
+                        EmptyArr 
+                  else let type_e1 = type_expr t.(0) tenv in 
+                      let () = Array.iter (fun e -> check e type_e1 tenv) t in
+                      TArr (type_e1)
+                  
             
   and type_mem_access (m : mem_access) tenv (check_final : bool) (set_op : bool) = match m with
     | Var x ->
           (try Env.find x tenv with
-          Not_found -> failwith "undeclared variabe")
+          Not_found -> error (Printf.sprintf "Variable %s is undefined" x))
           
     | Field (obj, x) -> 
       (*get class name of obj*)
       let class_name = (match type_expr obj tenv with
                         | TClass name -> name
-                        | _ -> failwith "not a class"
+                        | _ -> error "Cannot use dot operator on primtive types or arrays"
                       )
       in 
       
@@ -200,18 +233,18 @@ let typecheck_prog p =
           match obj with
           | This -> (*si l'attribut est privé, il ne doit pas être hérité*)
                     if (is_private && class_name != found_class) then 
-                          failwith "attribute is private, cannot be used in a subclass" 
+                          error (Printf.sprintf "The attribute %s is private, cannot be used in a subclass" x)
           | _ ->  (*si l'attribut est private alors on n'a pas le droit de l'utiliser si on est à l'extérieur de la classe *)
                     if is_private && (!class_level <> class_name) then 
-                        let () = Printf.printf "current class : %s - object class : %s\n" (!class_level) class_name in 
-                        failwith "attribute is private, cannot be used outside the class"
+                        (*let () = Printf.printf "current class : %s - object class : %s\n" (!class_level) class_name in *)
+                        error (Printf.sprintf "The attribute %s is private, cannot be used outside the class" x)
       in
 
       let check_protected is_protected attr_name = (*j'ai besoin de savoir dans quelle classe je suis*)
         match obj with
         | This -> ()  (*this.attr donc je suis à l'intérieur d'une classe et je peux utiliser un attribut hérité*)
         | _ -> let class_level_name = !class_level     (*a.x : si x est protected alors vérifier que la classe courante est une sous-classe de celle de a*)
-              in if is_protected && (is_sub_class class_level_name class_name p) = false then failwith "can't access protected attribute"
+              in if is_protected && (is_sub_class class_level_name class_name p) = false then error  (Printf.sprintf "The attribute %s is protected and therefore not accessible" x)
       in
 
       let check_final_aux is_final check_final = 
@@ -237,12 +270,15 @@ let typecheck_prog p =
             check_protected is_protected x;
             t
         else match current_class_def.parent with
-        | None -> failwith "attribute undefined"
+        | None -> error (Printf.sprintf  "The attribute %s undefined" x)
         | Some parent_class_name -> explore_parents_for_attr parent_class_name
 
       in explore_parents_for_attr class_name
     
-    | ArrElem(t, index) -> failwith "not implemented"
+    | ArrElem(tab, index) -> check index TInt tenv; let t = type_expr tab tenv in  
+                              (match t with
+                              | TArr (type_elem) -> type_elem
+                              | _ -> error "Cannot use [] operator on non-array expressions")
 
   and check_instr i ret tenv (check_final:bool) = match i with
     | Print e -> (match type_expr e tenv with
