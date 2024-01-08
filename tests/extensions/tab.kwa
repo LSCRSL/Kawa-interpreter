@@ -1,20 +1,31 @@
 var int[] t1;
 var int[] t2;
+var int[] n;
 var int[] empty;
 var bool[] empty_bool;
+
+var int i = 0;
 
 main {
     t1 = [0, 1];
     t2 = [0, 1];
+    n = new_arr int[5];
     empty = [];
     empty_bool = [];
 
-    print(t1 == t2);
-    print(t2 === t2);
-    print(empty === []);
+    print(t1 == t2);    // false
+    print(t2 === t2);   // true
+    print(empty === []); // true
     // print(empty == empty_bool);  plante
 
-    print(t1[0]);
+    print(t1[0]);     // 0
     t1[0] = 10;
-    print(t1[0]);
+    print(t1[0]);     // 10
+
+    while (i < 5) {
+        n[i] = i;
+        i = i+1;
+    }
+
+    print(n); // [ 0; 1; 2; 3; 4; ]
 }

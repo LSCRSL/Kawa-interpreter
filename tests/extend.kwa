@@ -1,6 +1,6 @@
 
-var Paire p;
-var Paire pt;
+var Paire p; 
+var Paire pt; 
 var Triple t;
 
 class Paire {

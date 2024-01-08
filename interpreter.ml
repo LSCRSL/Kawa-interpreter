@@ -244,6 +244,11 @@ let exec_prog (p: program): unit =
                     if vb then (eval e) else error (Printf.sprintf "Cannot cast from type %s to type %s" class_name target_class)
                 
       | Array (elements) -> VArr (Array.map (fun elem -> eval elem) elements)
+      | ArrayNull(t, n) -> let rec aux n acc = 
+                          if n = 0 then acc 
+                          else aux (n-1) (Null::acc) 
+                        in VArr (Array.of_list (aux (evali n) [])) 
+
                                
     
   in

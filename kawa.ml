@@ -52,6 +52,7 @@ type expr =
   | Transtyp of expr * typ
   (*table*)
   | Array of expr array
+  | ArrayNull of typ * expr
 
 (* Accès mémoire : variable ou attribut d'un objet *)
 and mem_access =
@@ -87,6 +88,7 @@ type method_def = {
     locals: (string * typ) list;
     return: typ;
     visib: visibility;
+    is_abstract: bool;
   }
         
 (* Définition de classe 
@@ -106,6 +108,7 @@ type class_def = {
     attributes_protected: string list;
     methods: method_def list;
     parent: string option;
+    is_abstract: bool;
   }
 
 (* Programme complet : variables globales, classes, et une séquence 

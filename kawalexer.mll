@@ -25,12 +25,14 @@
       "extends",  EXTENDS;
       "attribute", ATTRIBUTE;
       "new",       NEW;
+      "new_arr",   NEWARR;
       "this",      THIS;
       "final",     FINAL;
       "instanceof", INSTANCE_OF;
       "private", PRIVATE;
       "protected", PROTECTED;
       "super", SUPER;
+      "abstract", ABSTRACT;
     ] ;
 
   fun s ->

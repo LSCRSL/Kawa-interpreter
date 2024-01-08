@@ -3,33 +3,53 @@ open Lexing
 
 let file = Sys.argv.(1)
 
-let report (b,e) =
+let report b e file =
+   let c  = open_in file in
   let l = b.pos_lnum in
   let fc = b.pos_cnum - b.pos_bol + 1 in
   let lc = e.pos_cnum - b.pos_bol + 1 in
-  eprintf "File \"%s\", line %d, characters %d-%d:\n" file l fc lc
+
+   let rec boucle_lignes l = 
+      if l = 1 then input_line c
+      else let _ = input_line c in boucle_lignes (l-1)
+   in let line = boucle_lignes l in
+
+   let word = String.sub line (fc-1) (lc-fc) in 
+   
+   if word = "var" || word = "attribute" || word = "class"  || word = "abstract" || word = "main" || word = "method" || word = "}" then  
+      eprintf "File \"%s\", line %d, characters %d-%d; Missing semicolon ?\n" file l fc lc
+   else eprintf "File \"%s\", line %d, characters %d-%d:\n" file l fc lc
+
 
 let () =
   let c  = open_in file in
   let lb = Lexing.from_channel c in
   try
     let prog = Kawaparser.program Kawalexer.token lb in
-    close_in c;
+    
     Typechecker.typecheck_prog prog;
     Interpreter.exec_prog prog;
     exit 0
   with
   | Kawalexer.Error s ->
-     report (lexeme_start_p lb, lexeme_end_p lb);
+      close_in c;
+     report (lexeme_start_p lb) (lexeme_end_p lb) file;
      eprintf "lexical error: %s@." s;
      exit 1
+
   | Kawaparser.Error ->
-     report (lexeme_start_p lb, lexeme_end_p lb);
-     eprintf "syntax error@.";
+   report (lexeme_start_p lb) (lexeme_end_p lb) file;
+   eprintf "syntax error@.";
      exit 1
   | Interpreter.Error s ->
+      close_in c;
      eprintf "interpreter error: %s@." s;
      exit 1
+  | Typechecker.Error s ->
+      close_in c;
+      eprintf "typechecker error: %s@." s;
+      exit 1
   | e ->
+    close_in c;
      eprintf "Anomaly: %s\n@." (Printexc.to_string e);
      exit 2

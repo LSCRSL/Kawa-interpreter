@@ -54,6 +54,38 @@ let typecheck_prog p =
     (*let tenv_attr = add_env (List.map (fun (x, t) -> ("this." ^ x, t)) (cls_def.attributes @ cls_def.attributes_final)) tenv in*)
     (*boucler sur les methodes, rajouter les attibuts à l'env + appel check_mcall*)
     class_level := cls_def.class_name;
+
+    let () = if cls_def.is_abstract then   
+        begin
+            let rec check_parents_abstraction cls_def = 
+              match cls_def.parent with
+              | None -> ()
+              | Some parent_name -> let parent_cls_def = find_cls_def parent_name p in  
+                      if parent_cls_def.is_abstract = false then error "An asbtract class cannot inherit from a non-abstract class"
+                      else check_parents_abstraction parent_cls_def
+            in check_parents_abstraction cls_def;
+        end
+    else 
+        begin
+          let seen_methods = ref [] in
+          (*verifier qu'aucune méthode définie dans la classe n'est pas abstraite*) 
+          let rec check_abstract_inherited cls_def = 
+            let () = List.iter (fun (mdef : method_def) -> if mdef.is_abstract 
+                                                  && (List.exists (fun mthd_name -> mthd_name = mdef.method_name) !seen_methods) = false 
+                                                  then error "A non-abstract class cannot have an abstract method even if inherited"  
+                                                  else if (List.exists (fun mthd_name -> mthd_name = mdef.method_name) !seen_methods) = false then 
+                                                      seen_methods := mdef.method_name::(!seen_methods)) 
+                                cls_def.methods
+
+            in
+              match cls_def.parent with
+              | None -> ()
+              | Some parent_name -> let parent_cls_def = find_cls_def parent_name p in 
+              check_abstract_inherited parent_cls_def
+         
+        in check_abstract_inherited cls_def
+        end  
+    in 
     List.iter (fun instr -> check_instr instr TVoid tenv false) cls_def.init_instr;
     
     List.iter 
@@ -65,13 +97,25 @@ let typecheck_prog p =
     | Return _ -> true 
     | _ -> false 
     in 
-    (*TODO : s'assurer qu'il y a bien un return sinon lever une exception*)
+    (*s'assurer qu'il y a bien un return sinon lever une exception*)
     let () = match method_def.return with
     | TVoid -> ()
     | _ -> if method_def.method_name = "constructor" then  error "Constructor should have return type void"
            else if List.exists (fun instr -> is_return instr) method_def.code then ()
                 else error (Printf.sprintf "Missing return statement")
-  
+                
+    in 
+
+    (*si la méthode est abstraite, alors la classe doit être abstraite*)
+    
+    (*vérifier si c'est une redéfinition*)
+    let current_class_def = find_cls_def (!class_level) p in 
+    let () = match current_class_def.parent with 
+    | None -> ()
+    | Some parent_name -> let redef = find_mthd_def parent_name method_def.method_name p in 
+                          (match redef.visib with
+                          | Private -> error (Printf.sprintf "Method %s is private and cannot be overridden in subclasses" method_def.method_name) 
+                          | _ -> ())
     in
 
     (*rajouter les variables locales*)
@@ -122,15 +166,20 @@ let typecheck_prog p =
       | Get mem -> type_mem_access mem tenv false false
     (* Objet courant *)
     | This -> Env.find "this" tenv (*comment mettre à jour tenv pour qu'il contienne this*)
-    | New class_name -> let _ = find_cls_def class_name p in TClass class_name
+    | New class_name -> let cls_def = find_cls_def class_name p in 
+                        if cls_def.is_abstract then error (Printf.sprintf "Class %s is abstract" class_name)
+                        else TClass class_name
     | NewCstr (class_name, params) -> (*vérifier que les params sont cohérents*)
-                                    let t = type_mthcall class_name "constructor" params tenv in
-                                    (*verifier que le type de retour du constructeur est void*)
-                                    let () = (match t with
-                                      | TVoid -> ()
-                                      | _ -> error "Constructor should have return type void")
-                                    in
-                                    TClass class_name 
+                                    let cls_def = find_cls_def class_name p in 
+                                    if cls_def.is_abstract then error (Printf.sprintf "Class %s is abstract" class_name)
+                                    else
+                                          let t = type_mthcall class_name "constructor" params tenv in
+                                          (*verifier que le type de retour du constructeur est void*)
+                                          let () = (match t with
+                                            | TVoid -> ()
+                                            | _ -> error "Constructor should have return type void")
+                                          in
+                                          TClass class_name 
     | MethCall (e, method_name, params) -> 
             let class_type = type_expr e tenv in
             (*recup la nom de la classe*)
@@ -178,6 +227,8 @@ let typecheck_prog p =
                   else let type_e1 = type_expr t.(0) tenv in 
                       let () = Array.iter (fun e -> check e type_e1 tenv) t in
                       TArr (type_e1)
+    | ArrayNull (t, length) -> check length TInt tenv; 
+                                TArr (t)
                   
             
   and type_mem_access (m : mem_access) tenv (check_final : bool) (set_op : bool) = match m with
@@ -281,9 +332,7 @@ let typecheck_prog p =
                               | _ -> error "Cannot use [] operator on non-array expressions")
 
   and check_instr i ret tenv (check_final:bool) = match i with
-    | Print e -> (match type_expr e tenv with
-                  | TInt | TBool -> ()
-                  | _ -> failwith "à compléter")
+    | Print e -> ()
     | Set (x, e) -> let t = type_mem_access x tenv check_final true in check e t tenv 
     | If (e, s1, s2) -> check e TBool tenv; check_seq s1 ret tenv check_final; check_seq s2 ret tenv check_final
     | While(e, s) -> check e TBool tenv; check_seq s ret tenv check_final;

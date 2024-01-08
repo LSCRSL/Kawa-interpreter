@@ -1,0 +1,18 @@
+var A a;
+
+abstract class A {
+    method abstract void test() {}
+}
+
+abstract class B extends A {}
+
+class C extends B {
+    method void test() {
+        print(1);
+    }
+}
+
+main {
+    a = new A;
+    a.test(); // 1
+}

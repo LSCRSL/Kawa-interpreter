@@ -10,10 +10,11 @@
 %token <string> IDENT
 %token <string> CLASS_NAME
 %token MAIN
-%token LPAR RPAR BEGIN END SEMI COMMA RBRACKET LBRACKET
+%token LPAR RPAR BEGIN END SEMI COMMA RBRACKET LBRACKET 
+%token NEWARR (*allocation d'un tableau*)
 %token PRINT IF ELSE WHILE RETURN SET
 %token VAR
-%token CLASS METHOD EXTENDS ATTRIBUTE NEW THIS FINAL INSTANCE_OF PRIVATE PROTECTED SUPER (*classe*)
+%token CLASS METHOD EXTENDS ATTRIBUTE NEW THIS FINAL INSTANCE_OF PRIVATE PROTECTED SUPER ABSTRACT (*classe*)
 %token TINT TBOOL TVOID
 %token DOT
 %token EOF
@@ -68,6 +69,38 @@ type_decl:
 
 (*rajouter les methodes*)
 class_def:
+| ABSTRACT CLASS cls=CLASS_NAME BEGIN attr=list(attribute_declaration) mthd=list(method_def) END { 
+    let decl_list, set_list = aux attr [] [] in    
+    let attr_typ_list, final_attr_names, private_attr_names, protected_attr_names = separate_attributes decl_list [] [] [] [] in
+    (*List.iter (fun x -> Printf.printf "%s : " x) private_attr_names;*)
+    {
+      class_name=cls; 
+      init_instr=set_list; 
+      attributes=attr_typ_list; 
+      attributes_final=final_attr_names;
+      attributes_private=private_attr_names; 
+      attributes_protected=protected_attr_names;
+      methods=mthd; 
+      parent=None;
+      is_abstract=true;
+    }
+  }
+| ABSTRACT CLASS cls=CLASS_NAME EXTENDS parent_name=CLASS_NAME BEGIN attr=list(attribute_declaration) mthd=list(method_def) END { 
+    let decl_list, set_list = aux attr [] [] in    
+    let attr_typ_list, final_attr_names, private_attr_names, protected_attr_names = separate_attributes decl_list [] [] [] [] in
+    (*List.iter (fun x -> Printf.printf "%s : " x) private_attr_names;*)
+    {
+      class_name=cls; 
+      init_instr=set_list; 
+      attributes=attr_typ_list; 
+      attributes_final=final_attr_names;
+      attributes_private=private_attr_names; 
+      attributes_protected=protected_attr_names;
+      methods=mthd; 
+      parent=Some parent_name;
+      is_abstract=true;
+    }
+  }
 | CLASS cls=CLASS_NAME BEGIN attr=list(attribute_declaration) mthd=list(method_def) END { 
     let decl_list, set_list = aux attr [] [] in    
     let attr_typ_list, final_attr_names, private_attr_names, protected_attr_names = separate_attributes decl_list [] [] [] [] in
@@ -80,7 +113,8 @@ class_def:
       attributes_private=private_attr_names; 
       attributes_protected=protected_attr_names;
       methods=mthd; 
-      parent=None
+      parent=None;
+      is_abstract=false;
     }
   }
 | CLASS cls=CLASS_NAME EXTENDS parent_name=CLASS_NAME BEGIN attr=list(attribute_declaration) mthd=list(method_def) END {
@@ -94,7 +128,8 @@ class_def:
       attributes_private=private_attr_names; 
       attributes_protected=protected_attr_names;
       methods=mthd; 
-      parent=Some parent_name
+      parent=Some parent_name;
+      is_abstract=false;
     }
   }
 ;
@@ -123,6 +158,7 @@ method_def:
         locals=fst acc_tuple; 
         return=t;
         visib=Public;
+        is_abstract=false;
       }
   }
 
@@ -135,6 +171,7 @@ method_def:
         locals=fst acc_tuple; 
         return=t;
         visib=Private;
+        is_abstract=false;
       }
   }
 
@@ -147,6 +184,29 @@ method_def:
         locals=fst acc_tuple; 
         return=t;
         visib=Protected;
+        is_abstract=false;
+      }
+  }
+| METHOD ABSTRACT t=type_decl name=IDENT LPAR param=separated_list(COMMA,arg) RPAR BEGIN END {
+      { 
+        method_name=name; 
+        code=[]; 
+        params=param; 
+        locals=[]; 
+        return=t;
+        visib=Public;
+        is_abstract=true;
+      }
+  }
+  | METHOD ABSTRACT PROTECTED t=type_decl name=IDENT LPAR param=separated_list(COMMA,arg) RPAR BEGIN END {
+      { 
+        method_name=name; 
+        code=[]; 
+        params=param; 
+        locals=[]; 
+        return=t;
+        visib=Protected;
+        is_abstract=true;
       }
   }
 ;
@@ -194,6 +254,7 @@ expression:
 (*classes*)
 | NEW x=CLASS_NAME {New x}
 | NEW x=CLASS_NAME LPAR params=separated_list(COMMA, expression) RPAR {NewCstr(x,params) } 
+| NEWARR t=type_decl LBRACKET e=expression RBRACKET { ArrayNull(t, e) }
 (*method*)
 | e=expression DOT name=IDENT LPAR param=separated_list(COMMA,expression) RPAR {MethCall(e,name,param)}
 | SUPER DOT name=IDENT LPAR param=separated_list(COMMA,expression) RPAR { Super(name, param) }
