@@ -12,6 +12,8 @@
 \usepackage{array}
 \usepackage{hyperref}
 \usepackage{geometry}
+\usepackage{listings}
+\usepackage{xcolor}
 \usepackage[francais]{babel}
 \DeclareMathOperator{\e}{e}
 \usepackage[utf8]{inputenc}
@@ -20,6 +22,30 @@
 \title{{\myfont Interprète Kawa}}
 \author{Nadine Hage Chehade, Lisa Ceresola}
 \date{}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{blue},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\footnotesize\ttfamily,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2
+}
 
 \begin{document}
 \maketitle
@@ -74,19 +100,193 @@ Nous avons créé un nouveau fichier comprenant des fonctions régulièrement ap
 - \texttt{is\_sub\_class} : fonction prenant en paramètre le nom de deux classes et renvoie vrai si la première classe est une sous-classe de la deuxième.
 \section{Extensions}
 \subsection{Champs immuables}
-Pour donner la possibilité de déclarer un attribut \texttt{final} nous avons d'abord ajouté le mot clé FINAL dans le lexer. Il a fallu l'ajouter en temps que token dans le parser. Pour différencier les attributs dont la valeur peut être modifié et ceux dont la valeur ne peut être modifié, il a fallu modifier la syntaxe abstraite. Nous avons décidé d'ajouter un nouveau champ \texttt{attributes\_final} dans le type \texttt{class\_def}.
+Pour donner la possibilité de déclarer un attribut \texttt{final} 
+nous avons d'abord commencer par réserver le mot clé FINAL dans le lexer, et l'intégrer dans la grammaire.
+Pour différencier les attributs dont la valeur peut être modifiée
+et ceux dont la valeur ne peut être modifiée, nous avons modifié la syntaxe abstraite. 
+Nous avons décidé d'ajouter un nouveau champ \texttt{attributes\_final} 
+dans le type \texttt{class\_def}. L'étape suivante consiste à modifier le typechecker pour 
+s'assurer qu'aucune méthode à part le constructeur ne modifie la valeur de cet attribut.
+Cette modification a été faite au niveau de la fonction \texttt{type\_mem\_access}. Pour 
+savoir si on a le droit de modifier ou pas un attribut, on a rajouté un paramètre \texttt{check\_bool}
+à cette fonction. Ce paramètre vaut \texttt{false} si la méthode est appelée depuis le constructeur
+et \texttt{false} sinon.
+
+Notre modification permet alors d'interdire les autres méthodes de changer la valeur d'un attribut ayant été déclaré comme \texttt{final}.
+Cependant, notre compilateur, à l'état actuel, permet au constructeur de changer la valeur d'un tel attribut, c'est-à-dire d'avoir 
+deux instructions d'affectations successives. Un simple booléen indiquant si une instruction 
+d'affectation est présente dans le constructeur ne suffit pas pour résoudre ce probléme.
+En effet, on pourrait avoir un branchement conditionnel avec deux affectations différentes suivant 
+une certaine condition. Il faudrait plutôt explorer les différentes branches du code afin 
+de s'assurer que chaque branche initialise cet attribut correctement.
+
 \subsection{Déclaration en série}
-Pour réussir à déclarer simultanément plusieurs variables de la forme : \texttt{var int x,y,z} nous avons modifié uniquement le fichier \texttt{kawaparser.mly} en précisant que le champ \texttt{names} n'est plus un identifiant mais un liste d'identifiants. 
+Pour réussir à déclarer simultanément plusieurs variables de la forme : 
+\texttt{var int x,y,z} nous avons modifié uniquement le fichier 
+\texttt{kawaparser.mly} en précisant que le champ \texttt{names} 
+n'est plus un identifiant mais un liste non vide d'identifiants.
+
+Voici la définition des différents symboles de la grammaire qui implémentent cette extension : 
+\begin{lstlisting}[style=mystyle]
+    <var_decl> := VAR <type_decl> separated_nonempty_list(COMMA,IDENT) SEMI
+    <attribute_decl> := ATTRIBUTE <type_decl> separated_nonempty_list(COMMA,IDENT) SEMI;
+\end{lstlisting}
+
+Il s'agit ensuite de renvoyer une liste qui contient chaque nom de variable associé 
+au type présent dans la déclaration.
+
+
 \subsection{Déclaration avec valeur initiale}
-Pour que l'initialisation des attributs des classes mères se fasse, nous avons créé un nouveau champ \texttt{init\_instr} dans le type \texttt{class\_def}. Celui ci contient une liste d'instructions, en réalité ces instructions sont uniquement des affectations. Ainsi, grâce à ce champ, nous pouvons stocker les affectations et ensuite les utiliser pour les effectuer lorsque nous ajoutons les attributs aux environnements locaux. Ils seront alors initialisés. Ceux des classes-mères également.\\
+La partie facile de cette extension concerne les variables locales et globales.
+En effet, il suffit dans ce cas de modifier la grammaire pour permettre d'initialiser directement la variable.
+Nous sommes inspirés de la syntaxe de \texttt{python} qui permet d'affecter des valeurs 
+à plusieurs variables dans la même ligne, comme le montre l'exemple suivant : 
+\begin{verbatim}
+    int x, y = 1, 2;
+\end{verbatim}
+Voici la grammaire modifiée : 
+\begin{lstlisting}[style=mystyle]
+    <var_decl> := VAR type_decl separated_nonempty_list(COMMA,IDENT) 
+                SET separated_nonempty_list(COMMA,expression) SEMI
+\end{lstlisting}
+Si le nombre d'expressions présentes à droite du signe d'affectation ne 
+correspond pas au nombre de variables, la fonction \texttt{map\_ident\_val\_attributes} 
+erreur indiquant à l'utilisateur 
+s'il y a des valeurs manquantes, ou, 
+au contraire, des valeurs supplémentaires qu'il faut retirer.
+
+
+Ensuite, il s'agit de décomposer cette ligne de code en deux : déclaration et affectation. 
+Pour les variables globales, nous avons rajouté les instructions des affectations correspondantes 
+au tout début de la liste des instructions du \texttt{main}. 
+De même pour les variables locales des méthodes.
+
+\bigbreak
+Pour les attributs, la modification de la grammaire donne une
+nouvelle règle identique au cas des variables :
+\begin{lstlisting}[style=mystyle]
+    <attribute_decl> := ATTRIBUTE <type_decl> separated_nonempty_list(COMMA,IDENT) 
+                    SET separated_nonempty_list(COMMA,expression) SEMI
+\end{lstlisting}
+
+Le traitement des attributs est plus compliqué.
+En effet, on ne peut pas juste rajouter les instructions des affectations au code du constructeur pour 
+plusieurs raisons. D'abord, il est possible de créer une nouvelle 
+instance d'un objet sans appeler le constructeur. Dans ce cas, les attributs concernés
+ne seront pas même pas initialisés. Ensuite, il y a les questions de l'héritage.
+Une classe fille peut ne pas redéfinir le constructeur de la classe mère. Il faudrait donc commencer 
+par remonter la hiérarchie des classes, récupérer le code du premier constructeur rencontré pour ensuite
+l'ajouter à la liste des méthodes de la classe courante en y introduisant les affectations.
+
+
+Une solution plus simple consiste à modifier 
+la définition d'une classe dans le fichier \texttt{kawa.ml}
+Nous avons ajouté un nouveau champ \texttt{init\_instr} 
+dans \texttt{class\_def}. Il s'agit d'une liste 
+d'instructions qui sont, en réalité, uniquement 
+des affectations. Ainsi, grâce à ce champ, nous pouvons 
+stocker les affectations et les exécuter lors de la création d'une nouvelle instance 
+d'un objet, que le constructeur soit appelé ou pas. Les attributs seront alors 
+initialisés par la fonction \texttt{eval\_new} de l'interprète. Ceux des 
+classes-mères également, comme le montre l'extrait de code suivant : \\
+\begin{lstlisting}[style=mystyle, language=caml]
+    let rec exec_init init_instr_list obj = 
+        match init_instr_list with
+        | [] -> ()
+        | Set(Field(This, x), e)::suite -> 
+            let () = Hashtbl.replace obj.fields x (eval e) 
+            in exec_init suite obj
+        | _ -> failwith "eval_new : cas non atteignable - que des sets dans init_instr_list"
+
+    in let rec init_attributes_current_and_parents class_name obj = 
+        let cls_def = find_cls_def class_name p in  
+        let () = exec_init cls_def.init_instr obj in 
+        match cls_def.parent with
+        | None -> ()
+        | Some parent_class_name -> init_attributes_current_and_parents parent_class_name obj
+\end{lstlisting}
+
+Dans le typechecker, on commence par vérifier la cohérence de cette liste 
+d'instructions dans la fonction \texttt{check\_class} avant de passer à la vérification des méthodes.
+
+
 \subsection{Égalité structurelle}
-Pour cette extension, il a fallu dans un premier temps rajouter les opérateurs \texttt{===} et \texttt{=/=} dans le fichier \texttt{kawalexer.mly}. Il nous a donc fallu ajouter ce token dans \texttt{kawaparser.mly} et modifier la grammaire de \texttt{binop} en y ajoutant les opérateurs nécessaires et ajouter l'associativité à gauche. \\
-Pour la vérification des types, l'idée est la même que pour la cas d'égalité et d'inégalité.
-Pour compléter le fichier \texttt{interpreter.ml}, l'idée est aussi la même que le cas d'égalité et d'inégalité, seulement, nous remplaçons l'égalité physique des champs par l'égalité structurelle des champs.
+Pour cette extension, il a fallu dans un premier temps rajouter les opérateurs \texttt{===} et \texttt{=/=} dans le fichier \texttt{kawalexer.mly} ainsi que 
+les tokens \texttt{EQSTRUCT} et \texttt{NEQSTRUCT} 
+dans \texttt{kawaparser.mly}. Ensuite, nous avons modifié la grammaire de 
+\texttt{binop} en y ajoutant les opérateurs nécessaires 
+et ajouter l'associativité à gauche. \\
+
+Pour la vérification des types, de même que pour la cas d'égalité et d'inégalité, on vérifie que les deux expressions comparées sont de même type.
+
+Pour compléter le fichier \texttt{interpreter.ml}, l'idée est aussi la même que le cas d'égalité et d'inégalité, seulement, 
+nous remplaçons l'égalité physique des champs et des tableaux par l'égalité structurelle en utilisant l'opérateur \texttt{==} d'\texttt{ocaml}.
+
 \subsection{Super}
-Rajouter les mots-clés. rajouter une expression de la forme super.f($\ldots$) dans la grammaire. L'idée est simple, il faut chercher dans la classe-mère (si elle existe) une fonction nommée f. Ainsi, on appelle cette fonction sur l'objet de la classe-fille. Ajout d'un paramètre à la fonction \texttt{eval\_call} afin de savoir si l'on cherche la méthode dans la/les classes-mères ou dans la classe "d'origine" (très mal dit).\\
+Après avoir réservé le mot clé \texttt{super}, nous étendons le type \texttt{expr} en rajoutant 
+le constructeur suivant pour stocker le nom de la méthode appelée ainsi que le liste des paramètres : 
+\begin{verbatim}
+    | Super of string * expr list
+\end{verbatim}
+
+Nous introduisons une nouvelle règle dans la grammaire pour le symbole \texttt{expression} : 
+\begin{lstlisting}[style=mystyle]
+    <expression> := SUPER DOT IDENT LPAR separated_list(COMMA,expression) RPAR 
+\end{lstlisting}
+
+Ensuite, pour vérifier la cohérence de cette expression dans le typechecker, il s'agit de vérifier que la méthode appelée est bien définie dans la classe parente 
+dont hérite la classe contenant cet appel. On ne remonte pas plus loin dans la hiérarchie des classes.
+Afin de localiser facilement la classe courante pour laquelle on se trouve lors de la vérification d'une certaine 
+classe, on crée une référence vers le nom de la classe courante : 
+\begin{verbatim}
+    let class_level = ref ""
+\end{verbatim}
+
+Cette variable est ensuite modifiée dans la fonction \texttt{check\_class}.
+On accède donc facilement au nom de classe courante, on récupère sa définition, on vérifie si elle hérite bien d'une 
+autre classe qui définit la méthode appelée avec \texttt{super}. Le type de cette expression sera donc 
+le type de cette méthode tel que précisé dans la classe parente.
+
+En ce qui concerne l'évaluation d'une telle expression, il suffit 
+d'appeler \texttt{eval\_call} avec le nom de la méthode, en précisant le 
+paramètre implicite comme étant \texttt{this} en en ajoutant un paramètre \texttt{super}
+pour indiquer à la fonction de chercher la définition de la méthode 
+dans la classe parente.
+
+
+
 \subsection{Transtypage}
-On suppose que le nom des classes commence par une majuscule et le nom des variables et attributs commence par une minuscule. En effet, nous avions avant d'implémenter cette règle, un conflit du type reduce/reduce pour une expression de la forme $(ident)$. On pouvait soit, réduire ident comme un type soit le réduire comme une variable. \textcolor{red}{(à compléter)}
+Afin d'utiliser la syntaxe de \texttt{Java} pour le transtypage qui est la suivante : 
+\begin{verbatim}
+    (T) e
+\end{verbatim}
+Nous avons introduit une nouvelle règle pour le transtypage : 
+\begin{lstlisting}[style=mystyle]
+    LPAR t=type_decl RPAR e=expression
+\end{lstlisting}
+Cependant nous avons été confrontées à un conlit reduce/reduce qu'on illustre par l'exemple suivant : 
+\begin{verbatim}
+    (Point) origine
+\end{verbatim}
+D'une part, cette expression peut être réduite en une expression de transtypage 
+suivant la règle au-dessus. D'autre part, \texttt{Point} peu être considérée comme le nom d'une variable et réduit 
+en un accès mémoire. Différentes solutions sont envisageables pour résoudre ce probléme. 
+La première que nous avons implémenté dans un premier temps pour effectuer des tests a été de 
+proposer une alternative à la syntaxe \texttt{Java} comme suit \texttt{cast(T, e)}.
+Une autre solution serait de garder une liste dynamique des types définis dans un programme et vérifier si \texttt{T}
+en fait partie.
+
+La solution que nous avons implémentée est de suivre les mêmes convention de nommage présentes dans \texttt{Ocaml}.
+On suppose que le nom des classes commence par une majuscule et le nom des variables et attributs commence par une minuscule.
+On introduit un nouveau token pour les noms des classes et on modifie la définition du symbol \texttt{typ} pour intégrer ce token.
+
+Pour la vérification des types, il s'agit de s'assurer que les deux classes concernées 
+se trouvent dans la même branche. De plus, on interdit le transtypage vers un type de base.
+On ne s'attarde pas non plus sur le cas des tableaux, qui pourraient être intéressant dans le cas d'un tableau contenant des objets.
+
+A l'interprétation, on vérifie que le type ciblé est une sur-classe de la classe de \texttt{e}. Dans le cas contraire, on déclenche 
+une erreur indiquant que le downcast est interdit.
+
 \subsection{Visibilité}
 Ajout d'un nouveau champ \texttt{visib} dans \texttt{method\_def} pour la visibilité. Un enrichissement de la grammaire a été nécessaire et un nouveau type somme a été créé : \texttt{type visibility = Private | Protected | Public}.\\
 Suivant la valeur du champ \texttt{visib}, l'attribut ou méthode est alors accessible :
@@ -97,6 +297,76 @@ Suivant la valeur du champ \texttt{visib}, l'attribut ou méthode est alors acce
 \subsection{Test de type}
 \textcolor{red}{(à compléter)}
 \texttt{instanceof}
+
+\subsection{Tableaux}
+Nous avons rajouté dans notre language la possibilité de manipuler 
+des tableaux de taille fixe. Nous résumons dans ce qui suit les étapes de l'implémentation
+\subsubsection{Un type pour les tableaux} 
+Nous modifions la définition des types comme suit : 
+\begin{lstlisting}[style=mystyle]
+    type typ =
+        | TVoid
+        | TInt
+        | TBool
+        | TClass of string
+        | TArr of typ
+        | EmptyArr
+\end{lstlisting}
+Cette définition devient donc une définition récursive.
+Le dernier type ne sert que dans le typechecker.
+Il intervient dans la vérification des instructions comme la suivante où 
+la liste vide reste cohérente avec une liste d'entiers.
+\begin{verbatim}
+    var int[] t;
+    t = [];
+\end{verbatim}
+
+
+\subsubsection{Modification de la grammaire}
+Il faut intégrer dans la grammaire les éléments de syntaxe suivant : 
+\begin{itemize}
+    \item création d'un nouveau tableau en énumérant ces éléments : \texttt{[1, 2, 3]}
+            \begin{lstlisting}[style=mystyle]
+<expression> := LBRACKET separated_list(COMMA, expression) RBRACKET\end{lstlisting}
+    \item création d'un tableau en indiquant sa taille \texttt{new int[n]}
+    \begin{lstlisting}[style=mystyle]
+<expression> := NEW t=type_decl LBRACKET e=expression RBRACKET\end{lstlisting}
+        Cette nouvelle règle nous donnait un conflit reduce/reduce avec la règle d'accès à une case d'un tableau (voir plus bas).
+        En effet, une expression \texttt{new Point[5]} peut être réduite en expression suivant la règle au-dessus.
+        Mais une autre possibilité est de réduire d'abord \texttt{new Point} en expression, puis toute 
+        cette phrase en un accès mémoire.
+        Afin de contourner ce problème, nous avons opté pour une variante de cette syntaxe 
+        en utilisant un autre mot-clé \texttt{new\_arr} spécifique aux tableaux.
+        Il suffit donc de remplacer le token \texttt{NEW} par \texttt{NEWARR} et la grammaire 
+        obtenue ne présente aucun conflit.
+    \item accès mémoire pour la lecture ou l'écriture \texttt{t[i]} : 
+    \begin{lstlisting}[style=mystyle]
+<mem_access> := expression LBRACKET expression RBRACKET\end{lstlisting}
+    \end{itemize}
+
+\subsubsection{Extension de la syntaxe abstraite}
+On étend le type \texttt{expr} en ajoutant les constructeurs suivant : 
+\begin{verbatim}
+    | Array of expr array
+    | ArrayNull of typ * expr
+\end{verbatim}
+
+Le premier correspond à la création d'un tableau en listant les éléments, et le second 
+à un tableau dont seule la taille est connue.
+
+\subsubsection{Règles de typage pour les tableaux} 
+\begin{itemize}
+    \item L'expression \texttt{[e1, \dots, eN]} est bien typée et de type \texttt{T[]} si chaque élément est de type \texttt{T}
+    \item L'expression \texttt{t[e]} est bien typée et de type \texttt{T} si \texttt{t} est un tableau de type \texttt{T[]} et \texttt{e} est un entier
+    \item L'instruction d'affectation \texttt{t = e} est bien typée dans le cas où \texttt{t} est un tableau de type \texttt{T[]} si l'expression \texttt{e} est un tableau vide ou un tableau de type \texttt{T[]}
+\end{itemize}
+
+\subsubsection{Interprétation}
+On représente les tableaux par des \texttt{Array} qui sont des structures de données mutables afin de faciliter la modification d'un tableau.
+L'accès à une case du tableau renvoie une erreur si l'indice est négatif ou supérieur ou égal à la taille du tableau.
+Un tableau créé avec \texttt{new\_arr} contient les valeurs \texttt{Null} dans toutes ses cases au moment de la création.
+
+
 \section{Idées et notes}
 $\rightarrow$ Tableaux en cours (à faire):\\
 - TAB t name[] = new t[n]; (création du tableau de type t et de n éléments\\
