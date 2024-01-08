@@ -3,7 +3,7 @@ var int[] t2;
 var int[] n;
 var int[] empty;
 var bool[] empty_bool;
-
+var int[][] double_t;
 var int i = 0;
 
 main {
@@ -28,4 +28,8 @@ main {
     }
 
     print(n); // [ 0; 1; 2; 3; 4; ]
+
+    double_t = [[1,2], [3,4]];
+    double_t[0][1] = 0;
+    print(double_t); // [ [1; 0 ;]; [3; 4; ];]
 }

@@ -1,6 +1,11 @@
 open Kawa
 open Parsing
 
+exception Error of string
+
+let error s = raise (Error s)
+
+
 type visibility = Private | Protected | Public
 
 let rec aux liste acc_decl acc_instr = 
@@ -47,11 +52,10 @@ let rec find_cls_def class_name p =
 and find_mthd_def (class_name : string) (mthd_name : string) (p : program) =
   let class_def = find_cls_def class_name p in
   let method_list = List.filter (fun method_def -> (method_def.method_name = mthd_name)) class_def.methods in
-
   let get_mthd (mthd_list : method_def list) : method_def = 
     match mthd_list with 
     | [] -> (match class_def.parent with 
-            | None -> failwith "the method is not implemented"
+            | None -> Printf.printf "%s" mthd_name; error "the method is not implemented"
             | Some parent_cls_name -> find_mthd_def parent_cls_name mthd_name p)
     | e::[] -> e
     | _ -> failwith "surcharge non implémentée"
@@ -88,3 +92,16 @@ let rec is_sub_class sub_class super_class p =
         match class_def.parent with
         | None -> false 
         | Some parent_class_name -> is_sub_class parent_class_name super_class p
+
+let rec is_implemented (class_name : string) (mthd_name : string) (p : program) =
+  let class_def = find_cls_def class_name p in
+  let method_list = List.filter (fun method_def -> (method_def.method_name = mthd_name)) class_def.methods in
+  let get_mthd (mthd_list : method_def list) = 
+    match mthd_list with 
+    | [] -> (match class_def.parent with 
+            | None -> false
+            | Some parent_cls_name -> is_implemented parent_cls_name mthd_name p)
+    | e::[] -> true
+    | _ -> failwith "surcharge non implémentée"
+  in 
+  get_mthd method_list

@@ -67,12 +67,10 @@ type_decl:
 | t=type_decl LBRACKET RBRACKET { TArr (t) }
 ;
 
-(*rajouter les methodes*)
 class_def:
 | ABSTRACT CLASS cls=CLASS_NAME BEGIN attr=list(attribute_declaration) mthd=list(method_def) END { 
     let decl_list, set_list = aux attr [] [] in    
     let attr_typ_list, final_attr_names, private_attr_names, protected_attr_names = separate_attributes decl_list [] [] [] [] in
-    (*List.iter (fun x -> Printf.printf "%s : " x) private_attr_names;*)
     {
       class_name=cls; 
       init_instr=set_list; 
@@ -88,7 +86,6 @@ class_def:
 | ABSTRACT CLASS cls=CLASS_NAME EXTENDS parent_name=CLASS_NAME BEGIN attr=list(attribute_declaration) mthd=list(method_def) END { 
     let decl_list, set_list = aux attr [] [] in    
     let attr_typ_list, final_attr_names, private_attr_names, protected_attr_names = separate_attributes decl_list [] [] [] [] in
-    (*List.iter (fun x -> Printf.printf "%s : " x) private_attr_names;*)
     {
       class_name=cls; 
       init_instr=set_list; 
@@ -104,7 +101,6 @@ class_def:
 | CLASS cls=CLASS_NAME BEGIN attr=list(attribute_declaration) mthd=list(method_def) END { 
     let decl_list, set_list = aux attr [] [] in    
     let attr_typ_list, final_attr_names, private_attr_names, protected_attr_names = separate_attributes decl_list [] [] [] [] in
-    (*List.iter (fun x -> Printf.printf "%s : " x) private_attr_names;*)
     {
       class_name=cls; 
       init_instr=set_list; 
@@ -145,7 +141,6 @@ attribute_declaration:
 | ATTRIBUTE FINAL t=type_decl names=separated_nonempty_list(COMMA,IDENT) SET values=separated_nonempty_list(COMMA,expression) SEMI { 
     map_ident_val_attributes t true Public names values [] []
  }
- 
 ;
 
 method_def:

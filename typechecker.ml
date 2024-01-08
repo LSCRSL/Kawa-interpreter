@@ -113,17 +113,18 @@ let typecheck_prog p =
            else if List.exists (fun instr -> is_return instr) method_def.code then ()
                 else error (Printf.sprintf "Missing return statement")
                 
-    in     
+    in  
     (*vérifier si c'est une redéfinition dans le cas d'une méthode*)
     let current_class_def = find_cls_def (!class_level) p in 
     let () = match current_class_def.parent with 
     | None -> ()
-    | Some parent_name -> let redef = find_mthd_def parent_name method_def.method_name p in 
-                          (match redef.visib with
-                          | Private -> error (Printf.sprintf "Method %s is private and cannot be overridden in subclasses" method_def.method_name) 
-                          | _ -> ())
-    in
+    | Some parent_name -> if is_implemented parent_name method_def.method_name p then 
+                            let redef = find_mthd_def parent_name method_def.method_name p in 
+                            (match redef.visib with
+                            | Private -> error (Printf.sprintf "Method %s is private and cannot be overridden in subclasses" method_def.method_name) 
+                            | _ -> ())
 
+    in
     (*rajouter les variables locales*)
     let tenv_locals = add_env method_def.locals tenv in 
     (*appeler checkseq sur le code de la fonction*)
@@ -239,7 +240,9 @@ let typecheck_prog p =
     | ArrayNull (t, length) -> check length TInt tenv; 
                                 TArr (t)
                   
-  (*renvoie le type d'un accès mémoire*)         
+  (*renvoie le type d'un accès mémoire*)
+  (*check final : true -> je dois vérifier que l'attribut est final car je suis en dehors du constructeur*) 
+  (*set_op : true -> écriture; false -> lecture*)       
   and type_mem_access (m : mem_access) tenv (check_final : bool) (set_op : bool) = match m with
     | Var x -> (*on cherche notre variable dans notre environnement*)
           (try Env.find x tenv with
@@ -253,20 +256,13 @@ let typecheck_prog p =
                       )
       in 
       
-      (*check if attribute is defined in a class*)
-      (*return : 
-         - bool : found attribute
-         - type : TVoid if not found
-         - bool : true if found in final attributes list 
-      *)
+      (*verifie que l'attribut est bien défini dans une classe*)
       let search_for_attribute_in_class class_def x = 
-        (*return type of attribute, and boolean = true if found*)
+        (*renvoie le type de l'attribut, et un booléen : true si l'attribut a été trouvé*)
         let rec search_attr_list list : typ * bool = match list with 
             | [] -> (TVoid, false)
             | (name, t)::suite -> if name = x then (t, true) else search_attr_list suite 
         in search_attr_list class_def.attributes
-    
-      
       in 
 
       (*on regarde si l'attribut est FINAL*)
@@ -280,6 +276,7 @@ let typecheck_prog p =
 
         in 
 
+      (*on regarde si l'attribut est PROTECTED*)
       let rec check_is_protected class_name = 
         let class_def = find_cls_def class_name p in 
         if List.exists (fun name -> name = x) class_def.attributes_protected then true 
@@ -290,6 +287,7 @@ let typecheck_prog p =
 
       in
 
+      (*verifie que nos attributs PRIVATE sont utilisés uniquement dans la classe où ils sont définis*)
       let check_private is_private attr_name found_class = 
           match obj with
           | This -> (*si l'attribut est privé, il ne doit pas être hérité*)
@@ -297,39 +295,45 @@ let typecheck_prog p =
                           error (Printf.sprintf "The attribute %s is private, cannot be used in a subclass" x)
           | _ ->  (*si l'attribut est private alors on n'a pas le droit de l'utiliser si on est à l'extérieur de la classe *)
                     if is_private && (!class_level <> class_name) then 
-                        (*let () = Printf.printf "current class : %s - object class : %s\n" (!class_level) class_name in *)
                         error (Printf.sprintf "The attribute %s is private, cannot be used outside the class" x)
       in
 
-      let check_protected is_protected attr_name = (*j'ai besoin de savoir dans quelle classe je suis*)
+      (*verifie que nos attributs PROTECTED sont utilisés dans la classe où ils sont définis ou dans ses classes filles*)
+      let check_protected is_protected attr_name = 
         match obj with
         | This -> ()  (*this.attr donc je suis à l'intérieur d'une classe et je peux utiliser un attribut hérité*)
         | _ -> let class_level_name = !class_level     (*a.x : si x est protected alors vérifier que la classe courante est une sous-classe de celle de a*)
               in if is_protected && (is_sub_class class_level_name class_name p) = false then error  (Printf.sprintf "The attribute %s is protected and therefore not accessible" x)
       in
 
+      (*vérifie que l'on ne modifie pas un attribut final en dehors de son constructeur lors d'une affectation*)
       let check_final_aux is_final check_final = 
           if set_op then
             match obj with
-            | This -> if check_final (*à l'extérieur d'un constructeur*)
+            | This -> if check_final (*à l'extérieur d'un constructeur et attribut est final*)
                       && is_final then failwith "Can't modify final attribute outside of constructor"
             | _ -> if is_final then  (*je modifie un attribut final d'une classe A dans le constructeur d'une autre classe B*)
-                      failwith "Can't modify final attribute outside of constructor"
-          
+                      failwith "Can't modify final attribute outside of constructor" 
       in 
 
+      (*verifie que l'attribut est correctement utilisé et renvoie son type*)
       let rec explore_parents_for_attr class_name = 
-        (*look in current class*)
         let current_class_def = find_cls_def class_name p in
+        (*on cherche notre attribut*)
         let t, found = search_for_attribute_in_class current_class_def x in 
         if found then 
+            (*on détermine sa visibilité*)
             let is_private = List.exists (fun attr_name -> x = attr_name) current_class_def.attributes_private in 
-            let is_final = check_is_final current_class_def.class_name in
             let is_protected = check_is_protected current_class_def.class_name in
+
+            let is_final = check_is_final current_class_def.class_name in
+
+            (*verifie la bonne utilisation de l'attribut suivant ses propriétés et visibilité*)
             check_final_aux is_final check_final;
             check_private is_private x current_class_def.class_name;
             check_protected is_protected x;
             t
+        (*on cherche notre attribut dans les classes parentes*)
         else match current_class_def.parent with
         | None -> error (Printf.sprintf  "The attribute %s undefined" x)
         | Some parent_class_name -> explore_parents_for_attr parent_class_name
