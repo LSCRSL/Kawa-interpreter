@@ -1,9 +1,10 @@
 open Format
 open Lexing
+open Helper
 
 let file = Sys.argv.(1)
 
-let report b e file =
+let report b e file missing_semi_error =
    let c  = open_in file in
   let l = b.pos_lnum in
   let fc = b.pos_cnum - b.pos_bol + 1 in
@@ -21,8 +22,9 @@ let report b e file =
    (*si les mots clés sont correctement écrits -> il manque un ";"*)
    if word = "var" || word = "attribute" || word = "class"  || word = "abstract" || word = "main" || word = "method" || word = "}" then  
       eprintf "File \"%s\", line %d, characters %d-%d; Missing semicolon ?\n" file l fc lc
-   else eprintf "File \"%s\", line %d, characters %d-%d:\n" file l fc lc
-
+   else 
+      if missing_semi_error then eprintf "File \"%s\", line %d or %d:\n" file (l-1) l 
+      else eprintf "File \"%s\", line %d, characters %d-%d:\n" file l fc lc
 
 let () =
   let c  = open_in file in
@@ -36,12 +38,15 @@ let () =
   with
   | Kawalexer.Error s ->
       close_in c;
-     report (lexeme_start_p lb) (lexeme_end_p lb) file;
+     report (lexeme_start_p lb) (lexeme_end_p lb) file false;
      eprintf "lexical error: %s@." s;
      exit 1
-
+  | Missing_semi -> close_in c;
+                  report (lexeme_start_p lb) (lexeme_end_p lb) file true;  
+                  eprintf "syntax error: missing semicolon@.";
+                  exit 1
   | Kawaparser.Error ->
-   report (lexeme_start_p lb) (lexeme_end_p lb) file;
+   report (lexeme_start_p lb) (lexeme_end_p lb) file false;
    eprintf "syntax error@.";
      exit 1
   | Interpreter.Error s ->

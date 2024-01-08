@@ -52,41 +52,15 @@
 \tableofcontents
 \newpage
 \section{Résumé}
-L'objectif de ce projet a été de contruire un interprète pour un petit langage objet inspiré de Java. \textcolor{red}{(à compléter)}
-\section{Analyse syntaxique}
-Nous avons réalisé l'analyse syntaxique du programme et produit l'arbre de syntaxe abstraite en complétant les fichiers \texttt{kawalexer.mly} et \texttt{kawaparser.mly}. Le fichier \texttt{kawalexer.mly} représente la syntaxe concrète du langage Kawa. On y introduit des symboles terminaux :  mots-clés, identifiants, constantes; et des symboles non terminaux. Nous avons ajouté des règles de priorité : l'accès à un attribut obtient la priorité la plus élévée, vient ensuite  les opérations arithmétiques et les opérations logiques.
-\section{Vérification des types}
-La vérification des types se fait dans le fichier \texttt{typechecker.ml} \textcolor{red}{(à compléter)}
-\section{Interprétation}
-L'interprétation se fait dans le fichier \texttt{interpreter.ml}. \textcolor{red}{(à compléter, je pense qu'il faut attendre qu'on ait terminé car les fonctions changent tout le temps)}
-\subsection{Valeurs et opérations de base}
-Fonctions utiles : \\
-\texttt{eval} : évalue une expression\\
-\texttt{exec} : exécute une instruction\\
-\texttt{exec\_seq} : exécute une séquence d'instructions.
-\subsection{Classes et objets}
-Fonction utile : \smallskip\\
-\texttt{evalnew} : permet de créer un nouvel objet.
-On ajoute les attributs de la classe courante et des classes mères s'il y a, dans notre environnement local. Si la création de notre nouvel objet fait appel à un constructeur, alors nous faisons appel à une méthode donc utilisons la fonction \texttt{eval\_call}
-\subsection{Variables et attributs}
-Fonction utile : \\
-\texttt{evalvar} : évalue si la variable ou l'attribut ont été déclarés.\\
-Pour le cas d'une \underline{variable}, on regarde si celle ci est dans l'environnement local ou global. Si ce n'est pas le cas, alors notre variable n'est pas définie.\\
-Pour le cas des \underline{attributs d'une classe}, il nous suffit de chercher le nom de notre attribut dans la Hashtbl représentant les attributs de la classe à l'aide la fonction \texttt{Hashtbl.find}.
-\subsection{Méthodes}
-Fonction utile : \\
-\texttt{eval\_call} qui évalue un appel de méthode. Cette fonction prend en argument : le nom de la méthode, l'objet qui appelle cette méthode, les arguments de cette méthode.\\
-Nous avons donc dans un premier temps cherché la définition de cette méthode. Il a fallu ensuite créer un environnement local pour exécuter la fonction et lui ajouter notre objet passé en argument. Il a ensuite fallu associer les arguments aux différents paramètres de cette fonction et ajouter le tout à notre environnement local. Nous ajoutons par la suite toutes les variables locales à notre environnement local.
-\\parler du return !! $\rightarrow$ on a créé un pointeur
-\section{Helper.ml}
-Nous avons créé un nouveau fichier comprenant des fonctions régulièrement appelées dans notre code : 
-\textcolor{green}{Je ne sais pas si on dit lorsque les fonctions sont utilisées ?}
+L'objectif de ce projet a été de contruire un interprète pour un petit langage objet inspiré de Java. Nous avons complété et modifié les fichiers \texttt{kawalexere.mll}, \texttt{kawaparser.mly}, \texttt{typechecker.ml} et \texttt{interpreter.ml} pour la base du projet. En ce qui concerne les extensions, les fichiers précédents ont égalememt été modfiés, nous avons de plus apporter quelques modifications aux fichiers \texttt{kawai.ml} et \texttt{kawa.ml}. \\
+\section{Fichier \texttt{helper.ml}}
+Nous avons créé un fichier \texttt{helper.ml} contenant des fonctions fréquemment appelées que nous allons détaillées :  
 \smallskip\\
-- \texttt{aux} : fonction prenant en paramètre une liste de tuples comprenant eux-même des listes et deux accumulateurs de liste. Elle renvoie alors un tuple composé de deux listes. Cette fonction est utilisée pour effectuer des déclarations en série avec valeurs initiales.
+- \texttt{aux} : fonction prenant en paramètre une liste de tuples comprenant eux-même des listes et deux accumulateurs de liste. Elle renvoie alors un tuple composé de deux listes. La première (respectivement deuxième) est la concaténation des listes du premier (respectivement deuxième) élement de chaque tuple. 
 \medskip\\
-- \texttt{map\_ident\_val\_attributes} : Elle vérifie, lors de la déclaration avec valeur initiale, que le nombre de valeur donnée correspond au nombre de déclarations. Elle renvoie un tuple. Le premier élément un quadruplet donnant les particularités de l'attribut (nom,type,est-t-il final ?,visibilité). Le second élément constitue une liste d'instructions. Cette fonction est utilisée lors de la déclaration d'attributs avec valeur initiale. 
+- \texttt{map\_ident\_val\_attributes} : Elle vérifie, lors de la déclaration avec valeur initiale, que le nombre de valeur donnée correspond au nombre de déclarations. Elle renvoie un tuple. Le premier élément un quadruplet donnant les particularités de l'attribut (nom,type,est-t-il final ?,visibilité). Le second élément constitue une liste d'instructions.  
 \medskip\\
-- \texttt{map\_ident\_val\_variables} : Effectue la même chose que la fonction \texttt{map\_ident\_val\_attributes}, mais pour les variables. Cependant, le premier élément du tuple renvoyé est un tuple de la forme : (nom,type). Cette fonction est utilisée lors de la déclaration de variables avec valeur initiale. \\
+- \texttt{map\_ident\_val\_variables} : Effectue la même chose que la fonction \texttt{map\_ident\_val\_attributes}, mais pour les variables. Cependant, le premier élément du tuple renvoyé est un tuple de la forme : (nom,type). \medskip\\
 - \texttt{find\_cls\_def} : fonction prenant en paramètre le nom d'une classe et le programme. Cette fonction vérifie que la classe existe et que deux classes n'ont pas le même nom. Si ces deux conditions sont vérifiées, alors la définition de la classe est renvoyée, sinon on renvoie une erreur. 
 \medskip\\
 - \texttt{find\_mthd\_def} : cette fonction prend en paramètre le nom d'une classe $c$, le nom d'une méthode $m$ et le programme. La fonction va alors renvoyer la définition de la méthode $m$ et qui est accessible depuis la classe $c$. On vérifie bien que la classe et la méthode existent, et on recherche aussi la méthode dans les classes parentes si elle n'existe pas dans la classe courante.
@@ -98,7 +72,22 @@ Nous avons créé un nouveau fichier comprenant des fonctions régulièrement ap
 (iv)\hspace{0.2cm} \texttt{attr\_protected\_names} : comporte le nom des attributs \texttt{protected}
 \medskip\\
 - \texttt{is\_sub\_class} : fonction prenant en paramètre le nom de deux classes et renvoie vrai si la première classe est une sous-classe de la deuxième.
+\section{Analyse syntaxique, vérification des types et interprétation}
+Nous avons réalisé l'analyse syntaxique du programme et produit l'arbre de syntaxe abstraite en complétant les fichiers \texttt{kawalexer.mly} et \texttt{kawaparser.mly}. Le fichier \texttt{kawalexer.mly} représente la syntaxe concrète du langage Kawa. On y introduit des symboles terminaux :  mots-clés, identifiants, constantes; et des symboles non terminaux. Nous avons ajouté des règles de priorité : l'accès à un attribut obtient la priorité la plus élévée, vient ensuite  les opérations arithmétiques et les opérations logiques.
+La vérification des types se fait, elle, dans le fichier \texttt{typechecker.ml} et l'interprétation se fait dans le fichier \texttt{interpreter.ml}.
+Le code étant commenté en détail, nous n'allons pas l'expliquer. Mais nous allons énoncer une difficulté rencontrée et comment nous l'avons résolue et également détailler l'implémentation des différentes extensions. 
+\section{Difficulté rencontrée lors du travail de base : le return}
+Le problème que nous avons rencontré se situait, dans la fonction \texttt{exec}, lorsque qu'il fallait exécuter une instruction de la forme \texttt{return e} où \texttt{e} était une expression. Il nous a été compliqué de trouver une solution afin d'avoir accès à ce que devait renvoyer notre méthode.\\
+Après une mûre réflexion, nous avons donc décidé de créer une variable globale \texttt{return\_exp} qui est une référence mutable et l'avons initialisé à Null.
+\begin{verbatim}
+    let return_exp = ref Null in
+\end{verbatim}
+Ainsi, lorsque nous devons exécuter une instruction de la forme \texttt{return e} il nous faudra donc évaluer l'expression et mettre à jour la valeur stockée dans \texttt{return\_exp} en y placant le résultat de notre évaluation. Comme un return marque la fin du méthode, il faut, après avoir exécuté toutes les instructions qui s'y trouvent, déréférencer la référence pour renvoyer la valeur qui s'y trouve.
+\begin{verbatim}
+    !return_exp
+\end{verbatim}
 \section{Extensions}
+Nous avons implémenté différentes extensions. Nous expliquons dans ce qui suit notre démarche pour chacune d'entre elles.
 \subsection{Champs immuables}
 Pour donner la possibilité de déclarer un attribut \texttt{final} 
 nous avons d'abord commencer par réserver le mot clé FINAL dans le lexer, et l'intégrer dans la grammaire.
@@ -253,6 +242,32 @@ paramètre implicite comme étant \texttt{this} en en ajoutant un paramètre \te
 pour indiquer à la fonction de chercher la définition de la méthode 
 dans la classe parente.
 
+\subsection{Test de type}
+Il s'agit pour cette extension de modifier le code de notre projet afin 
+de permettre à l'utilisateur de tester le type dynamique d'une variable à l'aide 
+de l'opérateur \texttt{instanceof}.
+
+D'abord, nous avons ajouté une nouvelle règle pour le symbole non terminal \texttt{expression}
+\begin{lstlisting}[style=mystyle]
+    <expression> := expression INSTANCE_OF type_decl    
+\end{lstlisting}
+
+Pour résoudre le conflit shift/reduce suite à l'extension de la grammaire,
+nous avons affecté au token \texttt{INSTANCE\_OF} la même priorité que les 
+opérateurs de comparaison. 
+
+Dans le typechecker, nous avons interdit l'usage de l'opérateur \texttt{instanceof} sur les types de base (int, bool, void). Pour les tableaux, nous avons également opté d'interdire l'usage de cet opérateur. Nous avons tenté d'adapter l'évaluation de cette expression quand le type testé est un tableau. Mais s'est posé le problème des tableaux vides. En effet, si un tableau est vide, on ne dispose pas d'assez d'information pour déterminer le type d'un tableau vide (on n'a pas la possibilité de remonter à l'étiquette de la variable ou de la signature de la méthode qui a renvoyé ce tableau vide comme résultat). Dans le cas d'un objet, l'expression \texttt{e instanceof t} a simplement le type \texttt{TBool}.
+
+Dans l'inteprète, il s'agit finalement de vérifier que la classe ciblée est bien une sur-classe du type dynamique de l'expression \texttt{e} en utilisant la fonction ci-dessous où \texttt{target\_class} est le type contenu dans \texttt{t}:
+
+\begin{lstlisting}[style=mystyle, language=caml]
+    let rec is_instance_of class_name = 
+        if class_name = target_class then true (*on verifie si le type dynamique de e = t*)
+        else let class_def = find_cls_def class_name p in  (*on regarde s'il est sous-type*)
+        match class_def.parent with
+        | None -> false 
+        | Some parent_class_name -> is_instance_of parent_class_name
+\end{lstlisting}
 
 
 \subsection{Transtypage}
@@ -288,29 +303,52 @@ A l'interprétation, on vérifie que le type ciblé est une sur-classe de la cla
 une erreur indiquant que le downcast est interdit.
 
 \subsection{Visibilité}
-Ajout d'un nouveau champ \texttt{visib} dans \texttt{method\_def} pour la visibilité. Un enrichissement de la grammaire a été nécessaire et un nouveau type somme a été créé : \texttt{type visibility = Private | Protected | Public}.\\
-Suivant la valeur du champ \texttt{visib}, l'attribut ou méthode est alors accessible :
-\smallskip \\
-- depuis toutes les classes (public);\\
-- depuis la classe courante ainsi que ses sous-classes (protected);\\
-- depuis la classe courante uniquement (private).
-\subsection{Test de type}
-\textcolor{red}{(à compléter)}
-Il s'agit pour cette extension de modifier le code de notre projet afin 
-de permettre à l'utilisateur de tester le type dynamique d'une variable à l'aide 
-de l'opérateur \texttt{instanceof}.
+Pour préciser la visibilité d'une méthode, nous avons commencé par définir 
+un nouveau type somme a été créé : 
+\begin{verbatim}
+    type visibility = Private | Protected | Public
+\end{verbatim}
+Ensuite nous avons ajouté un nouveau champ \texttt{visib} dans \texttt{method\_def} pour la visibilité. Si la signature d'une méthode ne contient pas le mot clé \texttt{private} ou \texttt{protected}, on suppose alors qu'elle est publique par défaut et accessible par \texttt{main} ou d'autres classes.
+Un enrichissement de la grammaire a été nécessaire pour déclarer une méthode comme privée ou protégée en utilisant le mot clé correspondant dans la signature apès \texttt{method}.
 
-D'abord, nous avons ajouté une nouvelle règle pour le symbole non terminal \texttt{expression}
-\begin{lstlisting}[style=mystyle]
-    <expression> := expression INSTANCE_OF type_decl    
+Le typechecker se charge ensuite de vérifier les deux conditions suivantes dans la fonction \texttt{type\_mthcall} comme le montre le code ci-dessous: 
+\begin{itemize}
+    \item une méthode privée ne peut pas être appelée depuis l'extérieur de la classe courante, et ne peut pas être redéfinie dans une sous-classe (cette dernière condition est vérifiée directement dans \texttt{check\_mdef} en cherchant dans les classes parentes, la signature d'une méthode ayant le même nom)
+    \item une méthode protégée ne peut être appelée que depuis la classe elle-même ou l'une de ses sous-classes
+\end{itemize}
+\begin{lstlisting}[style=mystyle, language=caml]
+let () = match mthd.visib with
+    | Private -> if obj_class_name <> (!class_level) then  error (Printf.sprintf "The method %s is private and can't be accessed outside the class" mthd_name)
+    | Protected -> if (is_sub_class (!class_level) obj_class_name p) = false then error (Printf.sprintf "The method %s is protected and is not accessible" mthd_name)
+    | Public -> ()     
 \end{lstlisting}
 
-Pour résoudre le conflit shift/reduce suite à l'extension de la grammaire,
-nous avons affecté au token \texttt{INSTANCE\_OF} une priorité plus élevée
+L'approche est très similaire pour les attributs. Comme pour les attributs finaux, nous ajoutons les champs suivant dans \texttt{class\_def} : 
+\begin{verbatim}
+    attributes_private: string list;
+    attributes_protected: string list;
+\end{verbatim}
+ainsi que le possibilité de déclarer un attribut comme privé ou protégé avec la syntaxe suivante : 
+\begin{verbatim}
+    attribute private int x;
+    attribute protected bool b;
+\end{verbatim}
 
+Comme pour les méthodes, un attribut qui n'est ni privé ni protégé est public par défaut.
+Le typechecker vérifie que l'accès aux attributs est cohérent avec sa visibilité. 
+Voici par exemple le code qui vérifie qu'un attribut privé est correctement utilisé : 
+\begin{lstlisting}[style=mystyle, language=caml]
+    let check_private is_private attr_name found_class = 
+          match obj with
+          | This -> (*si l'attribut est prive, il ne doit pas etre herite*)
+                    if (is_private && class_name != found_class) then 
+                          error (Printf.sprintf "The attribute %s is private, cannot be used in a subclass" x)
+          | _ ->  (*si l'attribut est private alors on n'a pas le droit de l'utiliser si on est a l'exterieur de la classe *)
+                    if is_private && (!class_level <> class_name) then 
+                        error (Printf.sprintf "The attribute %s is private, cannot be used outside the class" x)    
+\end{lstlisting}
+Si on accède à l'attribut avec \texttt{this}, alors l'attribut privé doit être défini dans cette même classe (et non dans une classe parente). Dans les autres cas, il faut que l'objet par lequel on accède à l'attribut soit une instance de la classe dans laquelle on se trouve. 
 
-
-\texttt{instanceof}
 
 \subsection{Tableaux}
 Nous avons rajouté dans notre language la possibilité de manipuler 
@@ -344,7 +382,7 @@ Il faut intégrer dans la grammaire les éléments de syntaxe suivant :
 <expression> := LBRACKET separated_list(COMMA, expression) RBRACKET\end{lstlisting}
     \item création d'un tableau en indiquant sa taille \texttt{new int[n]}
     \begin{lstlisting}[style=mystyle]
-<expression> := NEW t=type_decl LBRACKET e=expression RBRACKET\end{lstlisting}
+<expression> := NEW type_decl LBRACKET expression RBRACKET\end{lstlisting}
         Cette nouvelle règle nous donnait un conflit reduce/reduce avec la règle d'accès à une case d'un tableau (voir plus bas).
         En effet, une expression \texttt{new Point[5]} peut être réduite en expression suivant la règle au-dessus.
         Mais une autre possibilité est de réduire d'abord \texttt{new Point} en expression, puis toute 
@@ -380,17 +418,45 @@ On représente les tableaux par des \texttt{Array} qui sont des structures de do
 L'accès à une case du tableau renvoie une erreur si l'indice est négatif ou supérieur ou égal à la taille du tableau.
 Un tableau créé avec \texttt{new\_arr} contient les valeurs \texttt{Null} dans toutes ses cases au moment de la création.
 
+\subsection{Classes et méthodes abstraites}
+Le mot-clé \texttt{abstract} utilisé après \texttt{class} ou \texttt{method} permet de définir des classes et des méthodes abstraites.
 
-\section{Idées et notes}
-$\rightarrow$ Tableaux en cours (à faire):\\
-- TAB t name[] = new t[n]; (création du tableau de type t et de n éléments\\
-à voir car il semblerait que la création ait été implémentée de la sorte : [e1,e2,e3].\\
-- .add(type t) qui ajoute un élément à la fin du tableau;\\
-- .remove() qui retire le dernier élément du tableau;\\
-- accès : t[i] où i est l'indice $\rightarrow$ vérifier que t est un tableau et i est un entier compris entre 0 et la taille du tableau (exclu).\\
-- écriture : t[i] = n; \\
-- il faut bien vérifier que les expressions soient du même type, notamment lors de l'écriture ou ajout d'un élément.\\
-- peut-etre faut il créer un nouveau type pour les tableaux ? car on ne peut pas avoir un tableau de TVoid...
+Une méthode privée ne peut pas être abstraite car elle ne peut pas être redéfinie dans une sous-classe. De plus, une méthode abstraite ne contient aucune instruction, d'où les règles suivantes dans la grammaire : 
+\begin{lstlisting}[style=mystyle]
+<method_def> := METHOD ABSTRACT <type_decl> IDENT LPAR separated_list(COMMA,arg) RPAR BEGIN END
+    | METHOD PROTECTED ABSTRACT <type_decl> IDENT LPAR separated_list(COMMA,arg) RPAR BEGIN END
+\end{lstlisting}
+Une classe abstraite ne pouvant pas être instanciée, le typechecker vérifie, dans la fonction \texttt{type\_expr}, que la création d'un nouvel objet avec \texttt{new} ne concerne pas une classe abstraite. Dans la fonction \texttt{check\_class}, on vérifie les conditions suivantes : 
+\begin{itemize}
+    \item si une classe est abstraite, toutes ses classes parentes sont abstraites
+    \item si une classe n'est pas abstraite, alors aucune de ses méthodes héritées n'est abstraite
+\end{itemize}
+
+
+\subsection{"Missing semicolon"}
+Nous avons implémenté cette extension en deux temps. Pour détecter les points-virgules manquant entre deux déclarations de variables ou d'attributs, nous avons extrait le mot qui suit directement l'endroit où l'erreur a été déclenchée dans le parser. Si ce mot correspond à main, var, attribute, method, class, abstract ou une accolade fermante, c'est qu'il manque un \texttt{;} pour compléter la déclaration.
+
+Ensuite pour détecter les \texttt{;} manquant dans les instructions, nous avons introduit de nouveaux symboles non-terminaux pour parser une instruction sans \texttt{SEMI}, mais suivie d'un token marquant le début d'une nouvelle instruction, ou la fin du bloc de code. Si une telle instruction mal formée est parsée, alors une erreur spécifique à l'absence d'un point-virgule est déclenchée, et un message d'erreur correspndant est affiché. 
+\begin{lstlisting}[style=mystyle]
+    <missing_semi> :=
+    PRINT LPAR <expression> RPAR <follow>
+    | <expression> <follow> {}
+    | RETURN <expression> <follow> {}
+    | <memory_access> SET <expression> <follow> {}
+    ;
+    
+    <follow> :=
+    | PRINT
+    | IF
+    | WHILE
+    | RETURN
+    | IDENT
+    | NEW
+    | SUPER
+    | END
+    | THIS
+    | NEWARR
+\end{lstlisting}
 \end{document}
 
 

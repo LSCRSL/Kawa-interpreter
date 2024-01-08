@@ -2,6 +2,8 @@ open Kawa
 open Parsing
 
 exception Error of string
+exception Missing_semi
+
 
 let error s = raise (Error s)
 

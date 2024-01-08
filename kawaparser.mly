@@ -223,9 +223,30 @@ instruction:
 (*expression utilisee comme instruction : pour l'appel de fonctions*)
 | e=expression SEMI { Expr e }
 (*return*)
-| RETURN e=expression SEMI { Return e}
+| RETURN e=expression SEMI { Return e }
 (*affectation*)
 | x=memory_access SET e=expression SEMI {Set(x, e)}
+| missing_semi { raise Missing_semi }
+;
+
+missing_semi:
+| PRINT LPAR e=expression RPAR follow {}
+| expression follow {}
+| RETURN expression follow {}
+| memory_access SET expression follow {}
+;
+
+follow:
+| PRINT {}
+| IF {}
+| WHILE {}
+| RETURN {}
+| IDENT {}
+| NEW {}
+| SUPER {}
+| END {}
+| THIS {}
+| NEWARR {}
 ;
 
 memory_access:

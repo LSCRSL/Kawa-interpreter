@@ -291,7 +291,7 @@ let typecheck_prog p =
       let check_private is_private attr_name found_class = 
           match obj with
           | This -> (*si l'attribut est privé, il ne doit pas être hérité*)
-                    if (is_private && class_name != found_class) then 
+                    if (is_private && class_name <> found_class) then 
                           error (Printf.sprintf "The attribute %s is private, cannot be used in a subclass" x)
           | _ ->  (*si l'attribut est private alors on n'a pas le droit de l'utiliser si on est à l'extérieur de la classe *)
                     if is_private && (!class_level <> class_name) then 
@@ -361,4 +361,5 @@ let typecheck_prog p =
   in
 
   List.iter (fun cls_def -> check_class cls_def (Env.add "this" (TClass cls_def.class_name) tenv_)) p.classes;
+  class_level := "";
   check_seq p.main TVoid tenv_ true
