@@ -296,6 +296,20 @@ Suivant la valeur du champ \texttt{visib}, l'attribut ou méthode est alors acce
 - depuis la classe courante uniquement (private).
 \subsection{Test de type}
 \textcolor{red}{(à compléter)}
+Il s'agit pour cette extension de modifier le code de notre projet afin 
+de permettre à l'utilisateur de tester le type dynamique d'une variable à l'aide 
+de l'opérateur \texttt{instanceof}.
+
+D'abord, nous avons ajouté une nouvelle règle pour le symbole non terminal \texttt{expression}
+\begin{lstlisting}[style=mystyle]
+    <expression> := expression INSTANCE_OF type_decl    
+\end{lstlisting}
+
+Pour résoudre le conflit shift/reduce suite à l'extension de la grammaire,
+nous avons affecté au token \texttt{INSTANCE\_OF} une priorité plus élevée
+
+
+
 \texttt{instanceof}
 
 \subsection{Tableaux}

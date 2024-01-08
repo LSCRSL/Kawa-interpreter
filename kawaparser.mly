@@ -25,7 +25,7 @@
 %token AND OR
 %token NOT
 
-(* Priorités par ordre croissante de priorités*)
+(* Opérateurs par ordre croissant de priorités*)
 %left OR
 %left AND
 %right NOT
