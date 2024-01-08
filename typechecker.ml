@@ -10,6 +10,7 @@ let type_error ty_actual ty_expected =
 let type_undefined_error t = 
   error (Printf.sprintf "Type %s is undefined" (typ_to_string t))
 
+(*environnement global*)
 module Env = Map.Make(String)
 type tenv = typ Env.t
 
@@ -28,8 +29,10 @@ let typecheck_prog p =
   in 
 
   let tenv_ = add_env p.globals Env.empty in
+  (*créer une référence pour connaitre la classe courante*)
   let class_level = ref "" in
 
+  (*vérifie que l'expression e est bien typée et de type : typ*)
   let rec check e typ tenv =
     let rec explore_parents node cls target = 
       if cls = target then ()
@@ -49,14 +52,15 @@ let typecheck_prog p =
         | EmptyArr | TArr _ -> ()
         | _ -> type_error typ_e typ
 
+  (*vérifie que la classe est bien typée*)
   and check_class cls_def tenv = 
-    (*ajouter les attributs à l'env*)
-    (*let tenv_attr = add_env (List.map (fun (x, t) -> ("this." ^ x, t)) (cls_def.attributes @ cls_def.attributes_final)) tenv in*)
-    (*boucler sur les methodes, rajouter les attibuts à l'env + appel check_mcall*)
+    (*on met à jour la classe courante*)
     class_level := cls_def.class_name;
 
+    (*on distingue les cas suivant si on a une classe abstraite ou non*)
     let () = if cls_def.is_abstract then   
         begin
+            (*on vérifie que les classes parentes sont TOUTES abstraites*)
             let rec check_parents_abstraction cls_def = 
               match cls_def.parent with
               | None -> ()
@@ -67,17 +71,19 @@ let typecheck_prog p =
         end
     else 
         begin
+          (*liste permettant de savoir quelles méthodes ont déjà été rencontrées*)
           let seen_methods = ref [] in
-          (*verifier qu'aucune méthode définie dans la classe n'est pas abstraite*) 
+          (*verifier qu'aucune méthode définie dans la classe est abstraite*) 
           let rec check_abstract_inherited cls_def = 
             let () = List.iter (fun (mdef : method_def) -> if mdef.is_abstract 
-                                                  && (List.exists (fun mthd_name -> mthd_name = mdef.method_name) !seen_methods) = false 
+                                                  && (List.exists (fun mthd_name -> mthd_name = mdef.method_name) !seen_methods) = false (*mthd pas rencontré*)
                                                   then error "A non-abstract class cannot have an abstract method even if inherited"  
                                                   else if (List.exists (fun mthd_name -> mthd_name = mdef.method_name) !seen_methods) = false then 
-                                                      seen_methods := mdef.method_name::(!seen_methods)) 
+                                                      seen_methods := mdef.method_name::(!seen_methods)) (*on rajoute la méthode à notre liste*)
                                 cls_def.methods
 
             in
+            (*on boucle sur les parents*)
               match cls_def.parent with
               | None -> ()
               | Some parent_name -> let parent_cls_def = find_cls_def parent_name p in 
@@ -86,12 +92,15 @@ let typecheck_prog p =
         in check_abstract_inherited cls_def
         end  
     in 
+    (*on vérifie que les instructions sont bien typées*)
     List.iter (fun instr -> check_instr instr TVoid tenv false) cls_def.init_instr;
     
+    (*on vérifie que les méthodes sont bien typées et on ajoute les paramètres à l'environnement local*)
     List.iter 
-          (fun method_def -> check_mdef method_def (add_env method_def.params tenv)) 
+          (fun method_def -> check_mdef method_def (add_env method_def.params tenv))
           cls_def.methods
 
+  (*vérifie que la méthode est bien typée*)
   and check_mdef method_def tenv = 
     let is_return instr = match instr with
     | Return _ -> true 
@@ -104,11 +113,8 @@ let typecheck_prog p =
            else if List.exists (fun instr -> is_return instr) method_def.code then ()
                 else error (Printf.sprintf "Missing return statement")
                 
-    in 
-
-    (*si la méthode est abstraite, alors la classe doit être abstraite*)
-    
-    (*vérifier si c'est une redéfinition*)
+    in     
+    (*vérifier si c'est une redéfinition dans le cas d'une méthode*)
     let current_class_def = find_cls_def (!class_level) p in 
     let () = match current_class_def.parent with 
     | None -> ()
@@ -126,12 +132,11 @@ let typecheck_prog p =
     else 
       check_seq method_def.code method_def.return tenv_locals true
   
-  
+  (*nous donne le type de retour de la méthode*)
   and type_mthcall (obj_class_name : string) 
                    (mthd_name : string) 
                    (params : expr list) 
                    tenv : typ =
-    (*recherche de la methode dans parent*)
     let mthd = find_mthd_def obj_class_name mthd_name p in
     (*verifier qu'on a le droit d'appeler la méthode*)
     let () = match mthd.visib with
@@ -140,6 +145,7 @@ let typecheck_prog p =
     | Public -> () 
     in
     let args = mthd.params in 
+    (*vérifier que les paramètres donnés sont corrects (ie : du bon type et le bon nombre) *)
     let rec verif_type_params args params = 
       match args,params with
       |(name, t)::l1, e::l2 -> check e t tenv; verif_type_params l1 l2
@@ -150,6 +156,7 @@ let typecheck_prog p =
     let () = verif_type_params args params in
     mthd.return
 
+  (*renvoie le type d'une expression*)
   and type_expr e tenv = match e with
     | Int _  -> TInt
     | Bool _ -> TBool
@@ -204,6 +211,7 @@ let typecheck_prog p =
                                             in if method_exists then type_mthcall parent_class_name method_name params tenv
                                             else error (Printf.sprintf "Method %s not found in direct parent of class %s" method_name current_class_name))
     | Instance_of(e, t) -> let type_e = type_expr e tenv in 
+            (*on vérifie la bonne utilisation de instance of*)
             (match type_e with
             | TInt | TBool | TVoid -> error "cannot use instanceof operator on primitive types"
             | TClass _ | TArr _ -> (match t with
@@ -224,15 +232,16 @@ let typecheck_prog p =
                                 error (Printf.sprintf "target classes %s and %s are in different branches" class_e class_t) 
     | Array(t) -> if Array.length t = 0 then
                         EmptyArr 
+                  (*on vérifie que les élements sont tous du même type*)
                   else let type_e1 = type_expr t.(0) tenv in 
                       let () = Array.iter (fun e -> check e type_e1 tenv) t in
                       TArr (type_e1)
     | ArrayNull (t, length) -> check length TInt tenv; 
                                 TArr (t)
                   
-            
+  (*renvoie le type d'un accès mémoire*)         
   and type_mem_access (m : mem_access) tenv (check_final : bool) (set_op : bool) = match m with
-    | Var x ->
+    | Var x -> (*on cherche notre variable dans notre environnement*)
           (try Env.find x tenv with
           Not_found -> error (Printf.sprintf "Variable %s is undefined" x))
           
@@ -260,6 +269,7 @@ let typecheck_prog p =
       
       in 
 
+      (*on regarde si l'attribut est FINAL*)
       let rec check_is_final class_name = 
         let class_def = find_cls_def class_name p in 
         if List.exists (fun name -> name = x) class_def.attributes_final then true 

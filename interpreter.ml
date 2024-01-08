@@ -32,8 +32,8 @@ let print_expr_option e_opt = match e_opt with
 | Some _ -> Printf.printf "Some"
 
 let exec_prog (p: program): unit =
-  let env = Hashtbl.create 16 in
-  let return_exp = ref Null in
+  let env = Hashtbl.create 16 in (* notre environnement global*)
+  let return_exp = ref Null in (*pointeur représentant la valeur de retour initialisée à Null*)
   (*rajouter les variables globales dans env*)
   List.iter (fun (x, _) -> Hashtbl.add env x Null) p.globals;
   (*modifier les classes pour rajouter les final attributes dans final*)
@@ -53,9 +53,8 @@ let exec_prog (p: program): unit =
     | VArr a  -> a 
     | _ -> assert false
 
-    (*rajouter this à l'environnement local*)
+    (*evalue un appel de méthode*)
     and eval_call (f: string) (this: obj) (args : expr list) (super : bool) =
-        (*let objet = (evalo this) in*)
         let class_name = this.cls in 
         let mthd = if super then 
           begin
@@ -71,12 +70,13 @@ let exec_prog (p: program): unit =
             end
         else 
             find_mthd_def class_name f p in
-             
-        (*environnement local pour exécuter la fonction*)
-        let local_env = Hashtbl.create 16 in
-        (*ajouter l'objet courant à l'environnement*)
+
+        let local_env = Hashtbl.create 16 in (*environnement local pour exécuter la fonction*)
+
+        (*ajouter l'objet courant à l'environnement local*)
         let () = Hashtbl.replace local_env "this" (VObj this) in
 
+        (*ajoute les paramètres/arguments de la méthode à l'environnement local*)
         let rec param_to_env args params = match args, params with 
           | e1::l1, (name, _)::l2 ->  Hashtbl.replace local_env name (eval e1);
                                         param_to_env l1 l2;
@@ -90,10 +90,10 @@ let exec_prog (p: program): unit =
       | [] -> ()
     in 
     let () = locals_to_env mthd.locals in 
-    (*definir une ref pour la valeur de retour*)
     let () = exec_seq mthd.code local_env in 
     !return_exp (*dereference le pointeur*)
     
+    (*evalue un accès mémoire*)
     and evalvar (m : mem_access) = match m with
       | Var x -> if Hashtbl.mem lenv x then
                     Hashtbl.find lenv x
@@ -106,24 +106,26 @@ let exec_prog (p: program): unit =
       | Field(e, attribute) -> 
               let obj_ = evalo e in 
               Hashtbl.find obj_.fields attribute
-
+      
+      (*permet la lecture d'un élément*)
       | ArrElem(t, index) -> let arr = evalarr t in
                              let ind = evali index in 
                              let length = Array.length arr in 
                              if length <= ind then error (Printf.sprintf "List index out of range")
-                             else Array.get arr ind
+                             else Array.get arr ind 
               
-
+    (*creer un nouvel objet*)
     and evalnew(x : expr) = 
-      (*creer un nouvel objet*)
       
+      (*renvoie la définition de la classe et un record composé de son nom et de son env d'attributs*)
       let init_object class_name = 
         (*chercher dans classes la definition qu'on veut*)
         let class_def = find_cls_def class_name p in 
         (*environnement pour les attributs*)
         let attr_env = Hashtbl.create 8 in 
         let update class_def = 
-          List.iter (fun (attr_name, attr_type) -> Hashtbl.add attr_env attr_name Null) class_def.attributes in 
+          List.iter (fun (attr_name, attr_type) -> Hashtbl.add attr_env attr_name Null) class_def.attributes in
+        (* permet d'ajouter les attributs des classes parentes à l'environnement*) 
         let rec found_mother class_def =
           match class_def.parent with 
           | None -> ()
@@ -135,7 +137,7 @@ let exec_prog (p: program): unit =
         let () = found_mother class_def in
         class_def,{cls=class_name; fields=attr_env};
       in
-
+      (*on effectue les déclarations avec valeur initiale*)
       let rec exec_init init_instr_list obj = 
         match init_instr_list with
         | [] -> ()
@@ -143,8 +145,9 @@ let exec_prog (p: program): unit =
               let () = Hashtbl.replace obj.fields x (eval e) 
               in exec_init suite obj
         | _ -> failwith "eval_new : cas non atteignable - que des sets dans init_instr_list"
-
-      in let rec init_attributes_current_and_parents class_name obj = 
+      in 
+      (*déclarations avec valeur initiale de la classe courante et des classes parentes*)
+      let rec init_attributes_current_and_parents class_name obj = 
           let cls_def = find_cls_def class_name p in  
           let () = exec_init cls_def.init_instr obj in 
           match cls_def.parent with
@@ -162,6 +165,7 @@ let exec_prog (p: program): unit =
                                          in obj                         
         | _ -> assert false 
 
+    (*evalue une expression*)
     and eval (e: expr): value = 
       match e with
       | Int n  -> VInt n
@@ -220,15 +224,16 @@ let exec_prog (p: program): unit =
                                   eval_call name objet param false  (*e : objet, param: parametre de la fonction*)
       | Super(method_name, params) -> eval_call method_name (evalo This) params true
       | This -> Hashtbl.find lenv "this"
-      | Instance_of(e, t) -> let objet = (evalo e) in 
+      | Instance_of(e, t) -> (*verifier que le type dynamique de e est un sous-type de t*)
+                            let objet = (evalo e) in 
                             let target_class = (match t with
                                 | TClass x -> x 
                                 | _ -> failwith "ce cas n'est pas atteignable") 
                             in
                             let class_name = objet.cls in 
                             let rec is_instance_of class_name = 
-                              if class_name = target_class then true
-                              else let class_def = find_cls_def class_name p in  
+                              if class_name = target_class then true (*on vérifie si le type dynamique de e = t*)
+                              else let class_def = find_cls_def class_name p in  (*on regarde s'il est sous-type*)
                               match class_def.parent with
                               | None -> false 
                               | Some parent_class_name -> is_instance_of parent_class_name
@@ -244,7 +249,8 @@ let exec_prog (p: program): unit =
                     if vb then (eval e) else error (Printf.sprintf "Cannot cast from type %s to type %s" class_name target_class)
                 
       | Array (elements) -> VArr (Array.map (fun elem -> eval elem) elements)
-      | ArrayNull(t, n) -> let rec aux n acc = 
+      | ArrayNull(t, n) -> (*créer un array contenant n éléments Null*)
+                          let rec aux n acc = 
                           if n = 0 then acc 
                           else aux (n-1) (Null::acc) 
                         in VArr (Array.of_list (aux (evali n) [])) 
@@ -252,10 +258,11 @@ let exec_prog (p: program): unit =
                                
     
   in
-  
+    (*execute une instruction*)
     let rec exec (i: instr): unit = match i with
       | Print e -> 
           let v = eval e in 
+          (*on peut faire un appel à print_value ??*)
             let rec print_proc v = 
             match v with 
             | VInt n -> Printf.printf "%d" n
@@ -275,24 +282,27 @@ let exec_prog (p: program): unit =
             exec (While(e, s));
           end 
       | Set(m, e) -> (match m with
-          | Var x -> if Hashtbl.mem lenv x then
-                        Hashtbl.replace lenv x (eval e)
+          | Var x -> if Hashtbl.mem lenv x then (*on regarde si notre variable est dans notre env local*)
+                        Hashtbl.replace lenv x (eval e) (*on modife sa valeur*)
                     else 
-                      if Hashtbl.mem env x then 
+                      if Hashtbl.mem env x then (*on regarde si notre variable est dans notre env global*)
                         Hashtbl.replace env x (eval e)
                       else
                         error (Printf.sprintf "Variable %s is undefined" x)
           | Field (exp_obj, attribute) -> 
             let obj_ = evalo exp_obj in 
-
+            (* on modifie le champ de l'objet concerné*)
             Hashtbl.replace obj_.fields attribute (eval e);
           | ArrElem (t, index) -> let arr = evalarr t in 
                                   let ind = evali index in  
                                   if Array.length arr <= ind then error (Printf.sprintf "List index out of range")
+                                  (* on modifie la valeur de arr[ind] en y affectant l'évaluation de e *)
                                   else arr.(ind) <- (eval e)
         )
       | Expr(e) -> let _ = eval e in () (*faire un match : si c'est une méthode appeler eval sinon renvoyer une erreur*)
-      | Return(e) -> return_exp := eval e
+      | Return(e) -> return_exp := eval e (*renvoie la valeur de retour*)
+
+    (*execute une séquence d'instructions*)
     and exec_seq s = 
       List.iter exec s
     in
