@@ -225,19 +225,22 @@ let exec_prog (p: program): unit =
       | Super(method_name, params) -> eval_call method_name (evalo This) params true
       | This -> Hashtbl.find lenv "this"
       | Instance_of(e, t) -> (*verifier que le type dynamique de e est un sous-type de t*)
-                            let objet = (evalo e) in 
-                            let target_class = (match t with
-                                | TClass x -> x 
-                                | _ -> failwith "ce cas n'est pas atteignable") 
-                            in
-                            let class_name = objet.cls in 
-                            let rec is_instance_of class_name = 
-                              if class_name = target_class then true (*on vérifie si le type dynamique de e = t*)
-                              else let class_def = find_cls_def class_name p in  (*on regarde s'il est sous-type*)
-                              match class_def.parent with
-                              | None -> false 
-                              | Some parent_class_name -> is_instance_of parent_class_name
-                            in VBool (is_instance_of class_name)
+                            let value = eval e in 
+                            (match value with
+                            | VObj objet ->
+                                  let target_class = (match t with
+                                      | TClass x -> x 
+                                      | _ -> failwith "ce cas n'est pas atteignable") 
+                                  in
+                                  let class_name = objet.cls in 
+                                  let rec is_instance_of class_name = 
+                                    if class_name = target_class then true (*on vérifie si le type dynamique de e = t*)
+                                    else let class_def = find_cls_def class_name p in  (*on regarde s'il est sous-type*)
+                                    match class_def.parent with
+                                    | None -> false 
+                                    | Some parent_class_name -> is_instance_of parent_class_name
+                                  in VBool (is_instance_of class_name)
+                            | VArr _ | VInt _ | VBool _ | Null -> failwith "instance_of : cas non atteignable")
       | Transtyp(e, t) -> (*verifier que le type réel de e est un sous-type de t*)
                     let vb = evalb (Instance_of(e, t)) in 
                     let objet = evalo e in 

@@ -216,8 +216,8 @@ let typecheck_prog p =
             (match type_e with
             | TInt | TBool | TVoid -> error "cannot use instanceof operator on primitive types"
             | TClass _ | TArr _ -> (match t with
-                            | TInt | TBool | TVoid -> error "cannot use instanceof operator on primitive types"
-                            | TClass _ | TArr _ -> TBool
+                            | TInt | TBool | TVoid | TArr _ -> error "cannot use instanceof operator on primitive types or arrays"
+                            | TClass _ -> TBool
                             | EmptyArr -> failwith "Instance_of : ce cas ne devrait pas être atteignable")
             | EmptyArr -> failwith "Instance_of : ce cas ne devrait pas être atteignable")
     | Transtyp(e, t) -> let class_e = (match type_expr e tenv with

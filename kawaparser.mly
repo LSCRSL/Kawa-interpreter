@@ -28,11 +28,11 @@
 (* Opérateurs par ordre croissant de priorités*)
 %left OR
 %left AND
-%right NOT
-%left INSTANCE_OF
-%left LT LTE GT GTE ISEQUAL NOTEQUAL EQ_STRUCT NEQ_STRUCT
+%left NOTEQUAL EQ_STRUCT NEQ_STRUCT
+%left LT LTE GT GTE ISEQUAL INSTANCE_OF
 %left PLUS MINUS
 %left STAR DIV MODULO
+%right NOT
 %right RPAR
 %left LBRACKET (* LBRACKET ???*)
 %left DOT  (*priorité la plus élevée pour accéder à un attribut*)
