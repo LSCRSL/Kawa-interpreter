@@ -33,7 +33,7 @@ let print_expr_option e_opt = match e_opt with
 
 let exec_prog (p: program): unit =
   let env = Hashtbl.create 16 in (* notre environnement global*)
-  let return_exp = ref Null in (*pointeur représentant la valeur de retour initialisée à Null*)
+  let return_exp = ref Null in (*référence représentant la valeur de retour initialisée à Null*)
   (*rajouter les variables globales dans env*)
   List.iter (fun (x, _) -> Hashtbl.add env x Null) p.globals;
   (*modifier les classes pour rajouter les final attributes dans final*)
