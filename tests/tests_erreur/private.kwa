@@ -1,0 +1,30 @@
+var Origine o;
+class Point {
+    attribute private int x, y;
+    attribute bool b;
+
+    method void constructor(int x, int y) {
+        this.x = x;
+        this.y = y;
+        this.b = true;
+    }
+
+    method private void incr_x() {
+        this.x = this.x + 1;
+    }
+}
+
+class Origine extends Point {
+
+    method void c() {
+        var Point p = new Point(1,2); 
+        p.incr_x(); //plante
+        p.x = 3; //plante aussi
+    }
+
+}
+
+main {
+    o = new Origine(0,0);
+    o.c();
+}

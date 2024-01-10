@@ -30,12 +30,13 @@ class Point {
 }
 
 class Origine extends Point {
+
     method void test() {
-        //print(this.x); // plante
-        var Point p;
+        //print(this.x); //plante
+        //var Point p;
 
         p = new Point(1, 2);
-        //print(p.x);   // plante
+        print(p.x);   // plante
         //p.incr_x();     // plante
     }
 }
@@ -44,6 +45,6 @@ main {
     p = new Point(1, 2);
     print(p.b);     // true
     opp = p.opp();  // 0
-    //opp.incr_x();   // plante
+    opp.incr_x();   // plante
     //print(p.x);   // plante
 }

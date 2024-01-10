@@ -1,0 +1,30 @@
+var Point p;
+
+class Point {
+    attribute private int x, y;
+    attribute bool b;
+
+    method void constructor(int x, int y) {
+        this.x = x;
+        this.y = y;
+        this.b = true;
+    }
+
+     method protected void incr_x() {
+        this.x = this.x + 1;
+    }
+}
+
+
+class Plan {
+
+    attribute int x,y = 1,2;
+
+    method void creerPoint() {
+        var Point p = new Point(1,2);
+        p.incr_x(); //plante
+    }
+}
+main {
+         
+}

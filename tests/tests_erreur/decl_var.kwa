@@ -1,0 +1,6 @@
+var int x,y = 1;
+
+main{
+    print(x);
+    print(y);
+}

@@ -1,0 +1,21 @@
+class A {
+    attribute int x;
+
+    method void constructor() {
+        this.x = 8;
+    }
+
+    method abstract void one() {}
+}
+
+class B extends A{
+    method void one() {
+        this.x = 1;
+    }
+}
+main {
+}
+
+
+
+

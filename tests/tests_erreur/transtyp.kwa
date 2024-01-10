@@ -1,0 +1,30 @@
+var CA a;
+var CA a_prime;
+var CB b;
+var CD d;
+
+class CA {
+    method void test() {
+        print(1);
+    }
+}
+
+class CB extends CA {
+    method void test() {
+        print(2);
+    }
+}
+
+class CD extends CA {
+    method void test() {
+        print(3);
+    }
+}
+
+main {
+    a = new CA;
+    d = new CD;
+    a_prime = (CA) d;
+    b = (CB) d; //plante
+
+}

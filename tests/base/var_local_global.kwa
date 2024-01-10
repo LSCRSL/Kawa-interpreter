@@ -1,0 +1,18 @@
+var int x = 1;
+var Nombre n;
+
+class Nombre {
+    attribute int x;
+
+    method void constructor() {
+        this.x = 7;
+    }
+
+}
+
+main {
+    n = new Nombre();
+    print(x);
+    print(n.x);
+
+}

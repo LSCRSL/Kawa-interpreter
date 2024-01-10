@@ -1,0 +1,18 @@
+var A a;
+
+
+class A {
+    attribute final int x = 1;
+    attribute int y;
+    attribute bool b = true;
+
+    method void constructor(int y) {
+        this.y = y;
+    }
+}
+
+
+main {
+    a = new A(8);
+    a.x = 4; //erreur car x est final
+}
