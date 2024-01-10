@@ -1,0 +1,9 @@
+var Vehicule v;
+
+abstract class Vehicule {}
+
+class Car extends Vehicule {}
+
+main {
+    v = new Vehicule;
+}

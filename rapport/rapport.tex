@@ -12,11 +12,13 @@
 \usepackage{array}
 \usepackage{hyperref}
 \usepackage{geometry}
-\usepackage{listings}
 \usepackage{xcolor}
 \usepackage[francais]{babel}
 \DeclareMathOperator{\e}{e}
 \usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{listings}
+
 \geometry{hmargin=2.7cm, vmargin=2.5cm}
 \font\myfont=cmr12 at 30pt
 \title{{\myfont Interprète Kawa}}
@@ -52,9 +54,15 @@
 \tableofcontents
 \newpage
 \section{Résumé}
-L'objectif de ce projet a été de contruire un interprète pour un petit langage objet inspiré de Java. Nous avons complété et modifié les fichiers \texttt{kawalexere.mll}, \texttt{kawaparser.mly}, \texttt{typechecker.ml} et \texttt{interpreter.ml} pour la base du projet. En ce qui concerne les extensions, les fichiers précédents ont égalememt été modfiés, nous avons de plus apporter quelques modifications aux fichiers \texttt{kawai.ml} et \texttt{kawa.ml}. \\
+L'objectif de ce projet a été de construire un interprète pour un petit langage objet inspiré de Java. Nous avons complété et modifié les fichiers \texttt{kawalexer.mll}, \texttt{kawaparser.mly}, \texttt{typechecker.ml} et \texttt{interpreter.ml} pour la base du projet. En ce qui concerne les extensions, les fichiers précédents ont égalememt été modfiés, nous avons de plus apporter quelques modifications aux fichiers \texttt{kawai.ml} et \texttt{kawa.ml}. \\
+
+\section{Analyse syntaxique, vérification des types et interprétation}
+Nous avons réalisé l'analyse syntaxique du programme et produit l'arbre de syntaxe abstraite en complétant les fichiers \texttt{kawalexer.mly} et \texttt{kawaparser.mly}. Le fichier \texttt{kawalexer.mly} représente la syntaxe concrète du langage Kawa. On y introduit des symboles terminaux :  mots-clés, identifiants, constantes, opérateurs... Nous avons ajouté des règles de priorité : l'accès à un attribut obtient la priorité la plus élévée, vient ensuite  les opérations arithmétiques et les opérations logiques.
+La vérification des types se fait, elle, dans le fichier \texttt{typechecker.ml} et l'interprétation se fait dans le fichier \texttt{interpreter.ml}.
+Nous avons pris le soin de commenter le code en détail et n'expliquons donc que certaines parties relatives aux extensions. Dans la suite du rapport, nous présentons le fichier \texttt{Helper.ml}, quelques difficultés rencontrées, et l'implémentation des différentes extensions. 
+
 \section{Fichier \texttt{helper.ml}}
-Nous avons créé un fichier \texttt{helper.ml} contenant des fonctions fréquemment appelées que nous allons détaillées :  
+Nous avons créé un fichier \texttt{helper.ml} contenant des fonctions fréquemment appelées et que nous allons détaillées :  
 \smallskip\\
 - \texttt{aux} : fonction prenant en paramètre une liste de tuples comprenant eux-même des listes et deux accumulateurs de liste. Elle renvoie alors un tuple composé de deux listes. La première (respectivement deuxième) est la concaténation des listes du premier (respectivement deuxième) élement de chaque tuple. 
 \medskip\\
@@ -72,20 +80,30 @@ Nous avons créé un fichier \texttt{helper.ml} contenant des fonctions fréquem
 (iv)\hspace{0.2cm} \texttt{attr\_protected\_names} : comporte le nom des attributs \texttt{protected}
 \medskip\\
 - \texttt{is\_sub\_class} : fonction prenant en paramètre le nom de deux classes et renvoie vrai si la première classe est une sous-classe de la deuxième.
-\section{Analyse syntaxique, vérification des types et interprétation}
-Nous avons réalisé l'analyse syntaxique du programme et produit l'arbre de syntaxe abstraite en complétant les fichiers \texttt{kawalexer.mly} et \texttt{kawaparser.mly}. Le fichier \texttt{kawalexer.mly} représente la syntaxe concrète du langage Kawa. On y introduit des symboles terminaux :  mots-clés, identifiants, constantes; et des symboles non terminaux. Nous avons ajouté des règles de priorité : l'accès à un attribut obtient la priorité la plus élévée, vient ensuite  les opérations arithmétiques et les opérations logiques.
-La vérification des types se fait, elle, dans le fichier \texttt{typechecker.ml} et l'interprétation se fait dans le fichier \texttt{interpreter.ml}.
-Le code étant commenté en détail, nous n'allons pas l'expliquer. Mais nous allons énoncer une difficulté rencontrée et comment nous l'avons résolue et également détailler l'implémentation des différentes extensions. 
+
 \section{Difficulté rencontrée lors du travail de base : le return}
-Le problème que nous avons rencontré se situait, dans la fonction \texttt{exec}, lorsque qu'il fallait exécuter une instruction de la forme \texttt{return e} où \texttt{e} était une expression. Il nous a été compliqué de trouver une solution afin d'avoir accès à ce que devait renvoyer notre méthode.\\
-Après une mûre réflexion, nous avons donc décidé de créer une variable globale \texttt{return\_exp} qui est une référence mutable et l'avons initialisé à Null.
+Le problème que nous avons rencontré se situait, dans la fonction \texttt{exec}, lorsque qu'il fallait exécuter une instruction de la forme \texttt{return e} où \texttt{e} était une expression. 
+Trouver une solution afin d'avoir accès à ce que devait renvoyer notre méthode n'a pas été immédiat.\\
+Une première idée consistait à stocker une variable \texttt{return} dans l'environnement. Comme ce mot-clé est réservé, 
+il est garanti qu'aucune variable n'aura le même nom.
+
+Une autre solution, celle que nous avons adopté, est de créer une variable globale \texttt{return\_exp} qui est une référence mutable et de  l'initialiser à \texttt{Null}.
 \begin{verbatim}
-    let return_exp = ref Null in
+    let return_exp = ref Null
 \end{verbatim}
-Ainsi, lorsque nous devons exécuter une instruction de la forme \texttt{return e} il nous faudra donc évaluer l'expression et mettre à jour la valeur stockée dans \texttt{return\_exp} en y placant le résultat de notre évaluation. Comme un return marque la fin du méthode, il faut, après avoir exécuté toutes les instructions qui s'y trouvent, déréférencer la référence pour renvoyer la valeur qui s'y trouve.
+Ainsi, lorsque nous devons exécuter une instruction de la forme \texttt{return e} il nous faudra donc évaluer l'expression et mettre à jour la valeur stockée dans \texttt{return\_exp} en y plaçant le résultat de notre évaluation. Comme un return marque la fin du méthode, il faut, après avoir exécuté toutes les instructions qui s'y trouvent, déréférencer la référence pour renvoyer la valeur qui s'y trouve.
 \begin{verbatim}
     !return_exp
 \end{verbatim}
+
+Nous nous sommes également posées de nombreuses questions en travaillant sur le projet; en voici quelques unes et comment nous y avons remédiées :
+\begin{itemize}
+    \item \texttt{Return manquant} : si le type de la méthode n'est pas \texttt{void}, vérifier qu'il y a bien une instruction \texttt{return} (sauf si la méthode est abstraite).
+    \item Classes ou méthodes ayant le même nom : on choisit de déclencher une erreur au lieu de sélectionner la méthode/classe définie en dernier pour éviter toute ambiguïté.
+    \item Types bien définis : vérifier que les types apparaissant dans une déclaration existent.
+    \item Héritage et redéfinition : rien dans notre compilateur dans sa version actuelle n'interdit de redéfinir des attributs (redéclarer un attribut ayant le même nom et potentiellement un autre type) dans une sous-classe. Tout simplement, ces redéfinitions masquent celles des classes parentes, et lors de l'évaluation, l'interprète ne remonte pas dans la hiérarchie des classes puisqu'il a déjà trouvé un candidat.
+\end{itemize}
+
 \section{Extensions}
 Nous avons implémenté différentes extensions. Nous expliquons dans ce qui suit notre démarche pour chacune d'entre elles.
 \subsection{Champs immuables}
@@ -110,18 +128,18 @@ une certaine condition. Il faudrait plutôt explorer les différentes branches d
 de s'assurer que chaque branche initialise cet attribut correctement.
 
 \subsection{Déclaration en série}
-Pour réussir à déclarer simultanément plusieurs variables de la forme : 
-\texttt{var int x,y,z} nous avons modifié uniquement le fichier 
+Pour réussir à déclarer simultanément plusieurs variables de la façon suivante : 
+\texttt{var int x,y,z} nous avons modifié le fichier 
 \texttt{kawaparser.mly} en précisant que le champ \texttt{names} 
 n'est plus un identifiant mais un liste non vide d'identifiants.
 
 Voici la définition des différents symboles de la grammaire qui implémentent cette extension : 
 \begin{lstlisting}[style=mystyle]
     <var_decl> := VAR <type_decl> separated_nonempty_list(COMMA,IDENT) SEMI
-    <attribute_decl> := ATTRIBUTE <type_decl> separated_nonempty_list(COMMA,IDENT) SEMI;
+    <attribute_decl> := ATTRIBUTE <type_decl> separated_nonempty_list(COMMA,IDENT) SEMI
 \end{lstlisting}
 
-Il s'agit ensuite de renvoyer une liste qui contient chaque nom de variable associé 
+On renvoie ensuite une liste qui contient chaque nom de variable associé 
 au type présent dans la déclaration.
 
 
@@ -140,7 +158,7 @@ Voici la grammaire modifiée :
 \end{lstlisting}
 Si le nombre d'expressions présentes à droite du signe d'affectation ne 
 correspond pas au nombre de variables, la fonction \texttt{map\_ident\_val\_attributes} 
-erreur indiquant à l'utilisateur 
+lance une erreur indiquant à l'utilisateur 
 s'il y a des valeurs manquantes, ou, 
 au contraire, des valeurs supplémentaires qu'il faut retirer.
 
@@ -158,11 +176,11 @@ nouvelle règle identique au cas des variables :
                     SET separated_nonempty_list(COMMA,expression) SEMI
 \end{lstlisting}
 
-Le traitement des attributs est plus compliqué.
+Le traitement des attributs est cependant plus compliqué.
 En effet, on ne peut pas juste rajouter les instructions des affectations au code du constructeur pour 
 plusieurs raisons. D'abord, il est possible de créer une nouvelle 
 instance d'un objet sans appeler le constructeur. Dans ce cas, les attributs concernés
-ne seront pas même pas initialisés. Ensuite, il y a les questions de l'héritage.
+ne seront pas initialisés. Ensuite, il y a les questions de l'héritage.
 Une classe fille peut ne pas redéfinir le constructeur de la classe mère. Il faudrait donc commencer 
 par remonter la hiérarchie des classes, récupérer le code du premier constructeur rencontré pour ensuite
 l'ajouter à la liste des méthodes de la classe courante en y introduisant les affectations.
@@ -225,7 +243,7 @@ Nous introduisons une nouvelle règle dans la grammaire pour le symbole \texttt{
 
 Ensuite, pour vérifier la cohérence de cette expression dans le typechecker, il s'agit de vérifier que la méthode appelée est bien définie dans la classe parente 
 dont hérite la classe contenant cet appel. On ne remonte pas plus loin dans la hiérarchie des classes.
-Afin de localiser facilement la classe courante pour laquelle on se trouve lors de la vérification d'une certaine 
+Afin de localiser facilement la classe courante dans laquelle on se trouve lors de la vérification d'une certaine 
 classe, on crée une référence vers le nom de la classe courante : 
 \begin{verbatim}
     let class_level = ref ""
@@ -243,8 +261,7 @@ pour indiquer à la fonction de chercher la définition de la méthode
 dans la classe parente.
 
 \subsection{Test de type}
-Il s'agit pour cette extension de modifier le code de notre projet afin 
-de permettre à l'utilisateur de tester le type dynamique d'une variable à l'aide 
+Le but est de permettre à l'utilisateur de tester le type dynamique d'une variable à l'aide 
 de l'opérateur \texttt{instanceof}.
 
 D'abord, nous avons ajouté une nouvelle règle pour le symbole non terminal \texttt{expression}
@@ -277,7 +294,7 @@ Afin d'utiliser la syntaxe de \texttt{Java} pour le transtypage qui est la suiva
 \end{verbatim}
 Nous avons introduit une nouvelle règle pour le transtypage : 
 \begin{lstlisting}[style=mystyle]
-    LPAR t=type_decl RPAR e=expression
+    <expression> := LPAR t=type_decl RPAR e=expression
 \end{lstlisting}
 Cependant nous avons été confrontées à un conlit reduce/reduce qu'on illustre par l'exemple suivant : 
 \begin{verbatim}
@@ -297,9 +314,9 @@ On introduit un nouveau token pour les noms des classes et on modifie la défini
 
 Pour la vérification des types, il s'agit de s'assurer que les deux classes concernées 
 se trouvent dans la même branche. De plus, on interdit le transtypage vers un type de base.
-On ne s'attarde pas non plus sur le cas des tableaux, qui pourraient être intéressant dans le cas d'un tableau contenant des objets.
+On ne s'attarde pas non plus sur le cas des tableaux, qui pourraient néanmoins être intéressant dans le cas d'un tableau contenant des objets.
 
-A l'interprétation, on vérifie que le type ciblé est une sur-classe de la classe de \texttt{e}. Dans le cas contraire, on déclenche 
+Pour l'interprétation, on vérifie que le type ciblé est une sur-classe de la classe de \texttt{e}. Dans le cas contraire, on déclenche 
 une erreur indiquant que le downcast est interdit.
 
 \subsection{Visibilité}
@@ -432,6 +449,8 @@ Une classe abstraite ne pouvant pas être instanciée, le typechecker vérifie, 
     \item si une classe n'est pas abstraite, alors aucune de ses méthodes héritées n'est abstraite
 \end{itemize}
 
+Cependant une vérification que nous n'avons pas effectuée est la cohérence entre la signature de la redéfinition et 
+et celle de la méthode abstraite.
 
 \subsection{"Missing semicolon"}
 Nous avons implémenté cette extension en deux temps. Pour détecter les points-virgules manquant entre deux déclarations de variables ou d'attributs, nous avons extrait le mot qui suit directement l'endroit où l'erreur a été déclenchée dans le parser. Si ce mot correspond à main, var, attribute, method, class, abstract ou une accolade fermante, c'est qu'il manque un \texttt{;} pour compléter la déclaration.

@@ -1,11 +1,11 @@
 \babel@toc {french}{}\relax 
 \contentsline {section}{\numberline {1}Résumé}{2}{section.1}%
-\contentsline {section}{\numberline {2}Fichier \texttt {helper.ml}}{2}{section.2}%
-\contentsline {section}{\numberline {3}Analyse syntaxique, vérification des types et interprétation}{2}{section.3}%
+\contentsline {section}{\numberline {2}Analyse syntaxique, vérification des types et interprétation}{2}{section.2}%
+\contentsline {section}{\numberline {3}Fichier \texttt {helper.ml}}{2}{section.3}%
 \contentsline {section}{\numberline {4}Difficulté rencontrée lors du travail de base : le return}{3}{section.4}%
 \contentsline {section}{\numberline {5}Extensions}{3}{section.5}%
 \contentsline {subsection}{\numberline {5.1}Champs immuables}{3}{subsection.5.1}%
-\contentsline {subsection}{\numberline {5.2}Déclaration en série}{3}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.2}Déclaration en série}{4}{subsection.5.2}%
 \contentsline {subsection}{\numberline {5.3}Déclaration avec valeur initiale}{4}{subsection.5.3}%
 \contentsline {subsection}{\numberline {5.4}Égalité structurelle}{5}{subsection.5.4}%
 \contentsline {subsection}{\numberline {5.5}Super}{5}{subsection.5.5}%
@@ -18,5 +18,5 @@
 \contentsline {subsubsection}{\numberline {5.9.3}Extension de la syntaxe abstraite}{8}{subsubsection.5.9.3}%
 \contentsline {subsubsection}{\numberline {5.9.4}Règles de typage pour les tableaux}{8}{subsubsection.5.9.4}%
 \contentsline {subsubsection}{\numberline {5.9.5}Interprétation}{8}{subsubsection.5.9.5}%
-\contentsline {subsection}{\numberline {5.10}Classes et méthodes abstraites}{8}{subsection.5.10}%
+\contentsline {subsection}{\numberline {5.10}Classes et méthodes abstraites}{9}{subsection.5.10}%
 \contentsline {subsection}{\numberline {5.11}"Missing semicolon"}{9}{subsection.5.11}%

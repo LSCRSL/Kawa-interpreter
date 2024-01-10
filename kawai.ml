@@ -20,7 +20,7 @@ let report b e file missing_semi_error =
    let word = String.sub line (fc-1) (lc-fc) in 
    
    (*si les mots clés sont correctement écrits -> il manque un ";"*)
-   if word = "var" || word = "attribute" || word = "class"  || word = "abstract" || word = "main" || word = "method" || word = "}" then  
+   if word = "var" || word = "attribute" || word = "class"  || word = "abstract" || word = "main" || word = "method" then  
       eprintf "File \"%s\", line %d, characters %d-%d; Missing semicolon ?\n" file l fc lc
    else 
       if missing_semi_error then eprintf "File \"%s\", line %d or %d:\n" file (l-1) l 

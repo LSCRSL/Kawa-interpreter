@@ -34,6 +34,7 @@ let typecheck_prog p =
 
   (*vérifie que l'expression e est bien typée et de type : typ*)
   let rec check e typ tenv =
+
     let rec explore_parents node cls target = 
       if cls = target then ()
       else let class_def = find_cls_def cls p in 
@@ -56,6 +57,9 @@ let typecheck_prog p =
   and check_class cls_def tenv = 
     (*on met à jour la classe courante*)
     class_level := cls_def.class_name;
+
+    (*vérifier que les types des attributs existent*)
+    List.iter (fun (x, t) ->  if type_exists t = false then type_undefined_error t) cls_def.attributes;
 
     (*on distingue les cas suivant si on a une classe abstraite ou non*)
     let () = if cls_def.is_abstract then   
@@ -107,11 +111,12 @@ let typecheck_prog p =
     | _ -> false 
     in 
     (*s'assurer qu'il y a bien un return sinon lever une exception*)
-    let () = match method_def.return with
-    | TVoid -> ()
-    | _ -> if method_def.method_name = "constructor" then  error "Constructor should have return type void"
-           else if List.exists (fun instr -> is_return instr) method_def.code then ()
-                else error (Printf.sprintf "Missing return statement")
+    if method_def.is_abstract = false then 
+      let () = match method_def.return with
+      | TVoid -> ()
+      | _ -> if method_def.method_name = "constructor" then  error "Constructor should have return type void"
+            else if List.exists (fun instr -> is_return instr) method_def.code then ()
+                  else error (Printf.sprintf "Missing return statement")
                 
     in  
     (*vérifier si c'est une redéfinition dans le cas d'une méthode*)
