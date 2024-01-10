@@ -1,0 +1,18 @@
+var CreeArr c;
+
+class CreeArr {
+    method int[] creeArrZeros(int length) {
+        var int[] tab = new_arr int[length];
+        var int i = 0;
+        while (i < length) {
+            tab[i] = 0;
+            i = i + 1;
+        }    
+        return tab;
+    }
+}
+
+main {
+    c = new CreeArr;
+    print(c.creeArrZeros(5));
+}
